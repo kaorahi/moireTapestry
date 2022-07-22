@@ -2,15 +2,9 @@
 
 (All patterns are generated from just one parameter without randomness.)
 
-<img src="tapestry0.1478000.png" width="20%">
-<img src="tapestry1.5600000.png" width="20%">
-<img src="tapestry10.5883000.png" width="20%">
-<img src="tapestry10.7728000.png" width="20%">
+<img src="tapestry0.1478000.png" width="20%"> <img src="tapestry1.5600000.png" width="20%"> <img src="tapestry10.5883000.png" width="20%"> <img src="tapestry10.7728000.png" width="20%">
 
-<img src="tapestry11.6400000.png" width="20%">
-<img src="tapestry2.3566000.png" width="20%">
-<img src="tapestry8.8415000.png" width="20%">
-<img src="tapestry9.6667000.png" width="20%">
+<img src="tapestry11.6400000.png" width="20%"> <img src="tapestry2.3566000.png" width="20%"> <img src="tapestry8.8415000.png" width="20%"> <img src="tapestry9.6667000.png" width="20%">
 
 Interactive & colorized version of the article:
 
