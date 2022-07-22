@@ -1,0 +1,400 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+ <meta charset="UTF-8" />
+ <title>Moire Tapestry</title>
+ <style>
+  #mainCanvasContainer {
+    display: inline-block; margin-left: 1em; margin-bottom: 1em; padding: none;
+    border: 1px solid black;
+    box-shadow: 2px 6px 10px gray; transition: box-shadow 0.2s;
+  }
+  #mainCanvasContainer:hover {
+    box-shadow: 4px 12px 20px black; transition: box-shadow 0.2s;
+  }
+  #gallery img {
+    border: solid 2px transparent; margin: 0.3em; padding: 0;
+    box-shadow: 1px 3px 5px gray; transition: transform 0.1s;
+  }
+  #gallery img[data-current="yes"] {box-shadow: 4px 12px 20px black;}
+  #gallery img:hover {
+    border: solid 2px blue; transform: scale(1.5); transition: transform 0.1s;
+  }
+  #blur {width: 50vmin;}
+  .thin {opacity: 0.2;}
+  #toast {
+   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+   display: flex; justify-content: center; align-items: center;
+   opacity: 0; pointer-events: none;
+  }
+  #toast p {
+   font-size: 200%; color: white; background-color: black;
+   padding: 0.5em; border-radius: 1em; z-index: 9; position: relative;
+  }
+ </style>
+ <script>
+ 'use strict'
+ window.onload = () => {
+  
+  // param
+  const resolution = 101, mainUnit = 4;
+  const mainPictureSize = '70vmin';
+  const colorTable = [
+    'white', 'orange', 'white', 'pink', 'white', 'red',
+    'white', 'magenta', 'white', 'yellow', 'white', 'blue',
+    //'white', 'brown', 'orange', 'white', 'pink', 'red',
+    //'white', 'khaki', 'magenta', 'white', 'yellow', 'blue',
+  ];
+  const coefURLDigits = 7;
+  const horizontalDragStep = 0.01;
+  const verticalDragStep = horizontalDragStep * 0.01;
+  const wheelStep = verticalDragStep * 0.001;
+  const kbdFastStep = horizontalDragStep;
+  const kbdSlowStep = verticalDragStep;
+  const kbdFineStep = kbdSlowStep * 0.1;
+  const defaultBlur = 0.15, blurDigits = 2;
+  
+  // samples
+  const galleryCoef = [
+    0.1199, 0.1216, 0.1478, 0.2729, 0.3125, 0.3477,
+    1.4033, 1.4117, 1.5482, 1.5600, 1.5652, 1.5711, 1.5937, 1.6097,
+    2.1419, 2.3566, 2.4080, 2.4153, 2.6071, 2.6143, 2.6341, 2.6352, 2.6379, 2.7694,
+    3.3735, 3.5450, 3.5807, 3.6750, 3.7090, 3.7199, 3.8920,
+    4.1471, 4.1903, 4.2985, 4.3278, 4.3632, 4.3902, 4.5334, 4.5886,
+    5.1179, 5.2108, 5.3794, 5.4286, 5.5813, 5.6188, 5.6343, 5.8076,
+    6.2432, 6.3273, 6.3716, 6.3829, 6.5290, 6.5388, 6.6486, 6.6521,
+    7.1642, 7.1842, 7.2852, 7.3500, 7.4000, 7.6500, 7.6580, 7.7289,
+    8.2727, 8.4782, 8.5385, 8.5389, 8.5455, 8.6129, 8.6412, 8.8333, 8.8415, 8.8800,
+    9.2230, 9.3060, 9.3156, 9.3992, 9.6667, 9.7742, 9.8050, 9.8060, 9.8712,
+    10.2353, 10.3902, 10.4532, 10.5883, 10.6799, 10.6956, 10.7728,
+    11.1891, 11.3906, 11.6400, 11.6500, 11.6758, 11.6799, 11.7451, 11.8064,
+  ].sort((a, b) => a - b);
+  const galleryUnit = 1, galleryPictureSize = '10em';
+  
+  // state
+  let mainCoef = galleryCoef[0];
+  let useGPU = false;
+  
+  // init
+  const mainCanvas = Q('#mainCanvas');
+  const internalCanvas = document.createElement('canvas');
+  setCanvasSize(mainCanvas, mainUnit, mainPictureSize);
+  setCanvasSize(internalCanvas, galleryUnit, galleryPictureSize);
+  const colorVec = getColorVectors();
+  readURL();
+  insertGallery();
+  update();
+  initializeUI();
+  
+  // main
+  function update() {
+    normalizeCoef();
+    draw(mainCoef);
+    updateGallery();
+  }
+  function draw(coef, canvas, unit) {
+    const cv = canvas || mainCanvas;
+    const args = [coef, cv, unit || mainUnit];
+    const usingGPU = drawGPU(...args) || drawCPU(...args);
+    if (cv !== mainCanvas) {return;}
+    Q('#state').innerText = `c=${encodeCoef(coef)}${usingGPU ? ' (GPU)' : ''}`
+    updateDownloadLink();
+  }
+  
+  // draw
+  function drawCPU(coef, canvas, unit) {
+    const g = canvas.getContext('2d');
+    const center = Math.floor(resolution / 2);
+    function sqr(k) {return k * k;}
+    for (let i = 0; i < resolution; i++) {
+      for (let j = 0; j < resolution; j++) {
+        const k = Math.floor(coef * (sqr(i - center) + sqr(j - center)));
+        const style = colorTable[k % colorTable.length];
+        fillSquare(g, i * unit, j * unit, unit, style);
+      }
+    }
+    return false;
+  }
+  function drawGPU(coef, canvas, unit) {
+    if (!useGPU || typeof twgl === 'undefined') {return false;}
+    const gl = canvas.getContext('webgl');
+    if (!gl) {return false;}
+    const shaders = ['vertex_shader', 'fragment_shader'];
+    const programInfo = twgl.createProgramInfo(gl, shaders);
+    const arrays = {position: {numComponents: 2, data: [-1,-1, 1,-1, -1,1, 1,1]}};
+    const bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
+    // dummy texture to use colorTable in GPU
+    const src = colorVec.flat(), numColors = colorVec.length;
+    const colorTexture = twgl.createTexture(gl, {src, width: numColors, height: 1})
+    const uniforms = {resolution, unit, coef, numColors, colorTexture};
+    gl.useProgram(programInfo.program);
+    twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
+    twgl.setUniforms(programInfo, uniforms);
+    twgl.drawBufferInfo(gl, bufferInfo, gl.TRIANGLE_STRIP);
+    return true;
+  }
+  
+  // drag
+  let prevPoint = null;
+  function eventPoint(e) {return {x: e.clientX, y: e.clientY};}
+  mainCanvas.onmousedown = e => {prevPoint = eventPoint(e);}
+  mainCanvas.onmouseleave = document.onmouseup = e => {prevPoint = null; update();}
+  mainCanvas.onmousemove = e => {
+    if (!prevPoint) {return;}
+    const point = eventPoint(e);
+    const [dx, dy] = [point.x - prevPoint.x, - (point.y - prevPoint.y)];
+    const horizontal = Math.abs(dx) > Math.abs(dy);
+    addCoef(horizontal ? dx * horizontalDragStep : dy * verticalDragStep);
+    prevPoint = point;
+  }
+  mainCanvas.onwheel = e => {e.preventDefault(); addCoef(e.deltaY * wheelStep);}
+  
+  // swipe
+  const touchEquiv = [
+    // ontouchXXX <==> onmouseXXX
+    ['start', 'down'],
+    ['move', 'move'],
+    ['end', 'leave'],
+    ['cancel', 'leave'],
+  ];
+  touchEquiv.forEach(([touchName, mouseName]) => {
+    mainCanvas['ontouch' + touchName] = e => {
+      const t = e.changedTouches[0];  // ignore multi-touch
+      if (!t) {return;}
+      mainCanvas['onmouse' + mouseName](t);
+      e.preventDefault();
+    }
+  });
+  
+  // keyboard
+  document.onkeydown = e => {
+    switch (e.key) {
+    case '<': addCoef(- kbdFastStep); break;
+    case '>': addCoef(+ kbdFastStep); break;
+    case ',': addCoef(- kbdSlowStep); break;
+    case '.': addCoef(+ kbdSlowStep); break;
+    case '[': addCoef(- kbdFineStep); break;
+    case ']': addCoef(+ kbdFineStep); break;
+    case 'c': copyCoef(); break;
+    }
+  }
+  
+  // UI parts
+  function initializeUI() {
+    initializeButtons();
+    window.onpopstate = e => {readURL(); update();};
+    Q('#mod').innerText = colorTable.length;
+    merge(Q('#blur'), {value: defaultBlur, oninput: updateBlur});
+    updateBlur();
+  }
+  function initializeButtons() {
+    // assume "id in HTML" = "function name in JS"
+    const buttonAction = {copyURL, newTab, nextGallery, prevGallery}
+    eachKeyValue(buttonAction, id => {Q('#' + id).onclick = buttonAction[id];});
+  }
+  function updateBlur() {
+    const b = Q('#blur').value;
+    mainCanvas.style.filter = `blur(${b}vmin)`;
+    Q('#blurVal').innerText = toNum(b).toFixed(blurDigits);
+  }
+  function updateDownloadLink() {
+    const href = mainCanvas.toDataURL('image/png');
+    const download = `tapestry${encodeCoef(mainCoef)}.png`;
+    merge(Q('#download'), {href, download});
+  }
+  
+  // clipboard
+  function copyCoef() {copyToClipboard(encodeCoef(mainCoef));}
+  function copyURL() {
+    updateURL();
+    copyToClipboard(location.href);
+  }
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text);
+    toast(text);
+  }
+  
+  // coef
+  function setCoef(newCoef) {mainCoef = newCoef; update();}
+  function addCoef(d) {setCoef(mainCoef + d);}
+  function normalizeCoef() {
+    function digitizeCoef(num) {return decodeCoef(encodeCoef(num))}
+    function positiveMod(k, mod) {return ((k % mod) + mod) % mod;}
+    const int = Math.floor(mainCoef), frac = mainCoef - int;
+    mainCoef = digitizeCoef(positiveMod(int, colorTable.length) + frac);
+  }
+  function encodeCoef(num) {return num.toFixed(coefURLDigits);}
+  function decodeCoef(str) {return toNum(str);}
+  
+  // graphics
+  function setCanvasSize(canvas, unit, pictureSize) {
+    canvas.width = canvas.height = resolution * unit;
+    canvas.style.width = canvas.style.height = pictureSize;
+  }
+  function fillSquare(g, x, y, size, style) {
+    g.fillStyle = style;
+    g.beginPath(); g.rect(x, y, size, size); g.fill();
+  }
+  function getColorVectors() {
+    function rgbaVec(colorString) {
+      const ctx = internalCanvas.getContext('2d');
+      fillSquare(ctx, 0, 0, 1, colorString);
+      return [...ctx.getImageData(0, 0, 1, 1).data];
+    }
+    return colorTable.map(rgbaVec);
+  }
+  
+  // URL
+  function readURL() {
+    new URLSearchParams(location.search).forEach((value, key) => {
+      switch (key) {
+      case 'c': mainCoef = decodeCoef(value); break;
+      case 'GPU': useGPU = true; break;
+      }
+    })
+  }
+  function updateURL() {
+    const url = generateURL(mainCoef);
+    url !== location.href && history.pushState(null, document.title, url);
+  }
+  function newTab() {
+    updateURL();
+    window.open(generateURL(mainCoef), '_blank');
+  }
+  function generateURL(coef) {
+    const params = new URLSearchParams('');
+    params.append('c', encodeCoef(coef));
+    useGPU && params.append('GPU', 'y');
+    const {protocol, host, pathname} = location;
+    return protocol + '//' + host + pathname + '?' + params.toString();
+  }
+  
+  // gallery
+  function insertGallery() {
+    const gallery = Q('#gallery');
+    Q('#samples').innerText = galleryCoef.length;
+    galleryCoef.forEach(c => {
+      const [a, img] = ['a', 'img'].map(tag => document.createElement(tag));
+      img.style.width = img.style.height = galleryPictureSize;
+      a.href = generateURL(c);
+      a.appendChild(img);
+      gallery.appendChild(a);
+      setTimeout(() => drawGallery(c, img));
+      a.onclick = e => {e.preventDefault(); openGallery(c);}
+    });
+  }
+  function drawGallery(coef, img) {
+    draw(coef, internalCanvas, galleryUnit);
+    img.src = internalCanvas.toDataURL('image/png');
+  }
+  function openGallery(coef) {
+    Q('#instruction').scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    updateURL();
+    setCoef(coef);
+    updateURL();
+  }
+  function nextGallery() {nextGalleryGen(c => c > mainCoef, false);}
+  function prevGallery() {nextGalleryGen(c => c < mainCoef, true);}
+  function nextGalleryGen(pred, reversed) {openGallery(findGallery(pred, reversed));}
+  function findGallery(pred, reversed) {
+    const orig = galleryCoef, a = reversed ? orig.slice().reverse() : orig;
+    return a.find(pred) || a[0];
+  }
+  function updateGallery() {
+    const cur = galleryCoef.indexOf(findGallery(c => c >= mainCoef, false));
+    document.querySelectorAll('#gallery img').forEach((img, k) => {
+      img.dataset.current = (k === cur) ? 'yes' : 'no';
+    });
+  }
+  
+  // toast
+  let lastToastAnimation = null;
+  function toast(message, millisec) {
+    lastToastAnimation && lastToastAnimation.finish();
+    Q('#toastMessage').innerText = message;
+    const keyframes = [{opacity: 1}, {opacity: 0.8}, {opacity: 0}];
+    lastToastAnimation = Q('#toast').animate(keyframes, millisec || 3000);
+  }
+  
+  // util
+  function Q(query) {return document.querySelector(query);}
+  function merge(target, ...sources) {Object.assign(target, ...sources);}
+  function eachKeyValue(h, f) {Object.keys(h).forEach(k => f(k, h[k]));}
+  function toNum(str) {return str - 0;}
+ }
+ </script>
+ <script defer src="twgl.min.js"></script>
+ <script id="vertex_shader" type="non-js">
+  attribute vec4 position;
+  void main () {gl_Position = position;}
+ </script>
+ <script id="fragment_shader" type="non-js">
+  precision mediump float;
+  uniform float resolution, unit, coef, numColors;
+  uniform sampler2D colorTexture;
+  void main() {
+    float center = floor(resolution / 2.0);
+    vec2 coord = floor(vec2(gl_FragCoord.x / unit, gl_FragCoord.y / unit)) - center;
+    float k = floor(mod(coef * dot(coord, coord), numColors));
+    vec4 color = texture2D(colorTexture, vec2((k + 0.5) / numColors, 0.0));
+    gl_FragColor = vec4(color.r, color.g, color.b, 1.0);
+  }
+ </script>
+</head>
+
+<body>
+<h1>Moire Tapestry - Generative art in 1986</h1>
+<p id="instruction">
+ Drag the mouse on the picture! (wheel: fine tuning)
+</p>
+<div id="mainCanvasContainer"><canvas id="mainCanvas"></canvas></div>
+<div>
+ blur <input id="blur" type="range" min="0" max="1" step="0.01"></input>
+ <span class="thin" id="blurVal"></span>
+</div>
+<p>
+<span id="state"></span>
+<button id="copyURL">Set &amp; Copy URL</button>
+<button id="newTab">New Tab</button>
+<a id="download">Download image</a>
+&nbsp;
+Samples
+<button id="prevGallery">&lt;</button>
+<button id="nextGallery">&gt;</button>
+</p>
+<h2>What is this?</h2>
+<p>
+This is an interactive &amp; colorized version of the article:
+<blockquote>
+A. K. Dewdney:
+"COMPUTER RECREATIONS",
+Scientific American,
+Vol. 255, No. 3, pp. 14-23,
+September 1986.
+</blockquote>
+<blockquote>
+("Wallpaper for the mind: computer images that are almost, but not quite, repetitive")
+</blockquote>
+The color at the point (x, y) is determined from
+<blockquote>
+floor(c * (x*x + y*y)) mod <span id="mod"></span>
+</blockquote>
+for the given parameter c.
+</p>
+<p><a href="https://github.com/kaorahi/moireTapestry">Project Home</a></p>
+<h2>Advanced usage</h2>
+<p>
+<ul>
+ <li>Fast change: horizontal drag or '<' / '>' key</li>
+ <li>Slow change: vertical drag or ',' / '.' key</li>
+ <li>Fine tuning: mouse wheel or '[' / ']' key</li>
+ <li>Copy c to clipboard: 'c' key</li>
+ <li class="thin">Enable GPU: Get <a href="https://twgljs.org/">twgl.min.js</a> (e.g. <a href="https://github.com/greggman/twgl.js/releases/tag/v4.23.2">v4.23.2</a>) and append "&amp;GPU=y" after "?c=x.xxxx" in the URL. (experimental)</li>
+</ul>
+</p>
+<h2>Samples</h2>
+These <span id="samples"></span> patterns are generated
+from just one parameter c without randomness.
+<p id="gallery"></p>
+<div id='toast'><p id='toastMessage'></p></div>
+</body>
