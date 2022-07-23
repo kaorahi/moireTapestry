@@ -205,11 +205,9 @@
   
   // clipboard
   function copyCoef() {copyToClipboard(encodeCoef(mainCoef));}
-  function copyURL() {
-    updateURL();
-    copyToClipboard(location.href);
-  }
+  function copyURL() {copyToClipboard(location.href);}
   function copyToClipboard(text) {
+    updateURL();
     navigator.clipboard.writeText(text);
     toast(text);
   }
