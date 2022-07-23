@@ -71,7 +71,7 @@
     10.5883, 10.6799, 10.6956, 10.7728,
     11.1891, 11.3906, 11.6500, 11.6758, 11.6799, 11.8064,
   ].sort((a, b) => a - b);
-  const galleryUnit = 1, galleryPictureSize = '10em';
+  const galleryUnit = 1, galleryPictureSize = '5';
   
   // state
   let mainCoef = galleryCoef[0];
@@ -85,9 +85,9 @@
   const colorVec = getColorVectors();
   readURL();
   insertGallery();
-  update();
-  initializeUI();
   warnSimilarGallery();
+  initializeUI();
+  update();
   
   // main
   function update() {
@@ -189,6 +189,7 @@
     window.onpopstate = e => {readURL(); update();};
     Q('#mod').innerText = colorTable.length;
     merge(Q('#blur'), {value: defaultBlur, oninput: updateBlur});
+    merge(Q('#gallerySize'), {value: galleryPictureSize, oninput: updateGallery});
     updateBlur();
   }
   function initializeButtons() {
@@ -284,7 +285,6 @@
     Q('#samples').innerText = galleryCoef.length;
     galleryCoef.forEach(c => {
       const [a, img] = ['a', 'img'].map(tag => document.createElement(tag));
-      img.style.width = img.style.height = galleryPictureSize;
       a.href = generateURL(c);
       a.appendChild(img);
       gallery.appendChild(a);
@@ -311,8 +311,10 @@
   }
   function updateGallery() {
     const cur = galleryCoef.indexOf(findGallery(c => c >= mainCoef, false));
+    const size = `${Q('#gallerySize').value}vw`
     galleryImg().forEach((img, k) => {
       img.dataset.current = (k === cur) ? 'yes' : 'no';
+      img.style.width = img.style.height = size;
     });
   }
   function warnSimilarGallery() {
@@ -414,6 +416,7 @@ for the given parameter c.
 <h2>Samples</h2>
 These <span id="samples"></span> patterns are generated
 from just one parameter c without randomness.
+<p>size <input id="gallerySize" type="range" min="5" max="40" step="1"></input></p>
 <p id="gallery"></p>
 <div id='toast'><p id='toastMessage'></p></div>
 </body>
