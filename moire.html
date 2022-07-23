@@ -17,6 +17,7 @@
     box-shadow: 1px 3px 5px gray; transition: transform 0.1s;
   }
   #gallery img[data-current="yes"] {box-shadow: 4px 12px 20px black;}
+  #gallery img.dup {border: solid 10px red;}
   #gallery img:hover {
     border: solid 2px blue; transform: scale(1.5); transition: transform 0.1s;
   }
@@ -45,6 +46,7 @@
     //'white', 'brown', 'orange', 'white', 'pink', 'red',
     //'white', 'khaki', 'magenta', 'white', 'yellow', 'blue',
   ];
+  const similarCoefDelta = [6];  // (coef + delta) gives almost similar result
   const coefURLDigits = 7;
   const horizontalDragStep = 0.01;
   const verticalDragStep = horizontalDragStep * 0.01;
@@ -85,6 +87,7 @@
   insertGallery();
   update();
   initializeUI();
+  warnSimilarGallery();
   
   // main
   function update() {
@@ -215,11 +218,12 @@
   // coef
   function setCoef(newCoef) {mainCoef = newCoef; update();}
   function addCoef(d) {setCoef(mainCoef + d);}
-  function normalizeCoef() {
+  function normalizeMainCoef() {mainCoef = normalizeCoef(mainCoef);}
+  function normalizeCoef(coef) {
     function digitizeCoef(num) {return decodeCoef(encodeCoef(num))}
     function positiveMod(k, mod) {return ((k % mod) + mod) % mod;}
-    const int = Math.floor(mainCoef), frac = mainCoef - int;
-    mainCoef = digitizeCoef(positiveMod(int, colorTable.length) + frac);
+    const int = Math.floor(coef), frac = coef - int;
+    return digitizeCoef(positiveMod(int, colorTable.length) + frac);
   }
   function encodeCoef(num) {return num.toFixed(coefURLDigits);}
   function decodeCoef(str) {return toNum(str);}
@@ -300,10 +304,19 @@
   }
   function updateGallery() {
     const cur = galleryCoef.indexOf(findGallery(c => c >= mainCoef, false));
-    document.querySelectorAll('#gallery img').forEach((img, k) => {
+    galleryImg().forEach((img, k) => {
       img.dataset.current = (k === cur) ? 'yes' : 'no';
     });
   }
+  function warnSimilarGallery() {
+    function similar1(a, b, d) {return normalizeCoef(Math.abs(a - b) - d) === 0;}
+    function similar(a, b) {return similarCoefDelta.find(d => similar1(a, b, d));}
+    galleryImg().forEach((img, k) => {
+      const isDup = galleryCoef.findIndex(c => similar(c, galleryCoef[k])) >= 0;
+      isDup && img.classList.add('dup');
+    });
+  }
+  function galleryImg() {return document.querySelectorAll('#gallery img');}
   
   // toast
   let lastToastAnimation = null;
