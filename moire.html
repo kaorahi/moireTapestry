@@ -179,6 +179,7 @@
     case '[': addCoef(- kbdFineStep); break;
     case ']': addCoef(+ kbdFineStep); break;
     case 'c': copyCoef(); break;
+    case 'V': e.ctrlKey && (openVariations(), e.preventDefault()); break;
     }
   }
   
@@ -259,16 +260,22 @@
     const url = generateURL(mainCoef);
     url !== location.href && history.pushState(null, document.title, url);
   }
-  function newTab() {
-    updateURL();
-    window.open(generateURL(mainCoef), '_blank');
-  }
   function generateURL(coef) {
     const params = new URLSearchParams('');
     params.append('c', encodeCoef(coef));
     useGPU && params.append('GPU', 'y');
     const {protocol, host, pathname} = location;
     return protocol + '//' + host + pathname + '?' + params.toString();
+  }
+  
+  // new tab
+  function newTab(f) {newTabForCoef(mainCoef);}
+  function openVariations() {
+    colorTable.forEach((_, k) => (k > 0) && newTabForCoef(mainCoef + k));
+  }
+  function newTabForCoef(coef) {
+    updateURL();
+    window.open(generateURL(coef), '_blank');
   }
   
   // gallery
@@ -400,6 +407,7 @@ for the given parameter c.
  <li>Slow change: vertical drag or ',' / '.' key</li>
  <li>Fine tuning: mouse wheel or '[' / ']' key</li>
  <li>Copy c to clipboard: 'c' key</li>
+ <li class="thin">Open variations in new tabs: 'Ctrl-Shift-v' key (may be blocked by the browser)</li>
  <li class="thin">Enable GPU: Get <a href="https://twgljs.org/">twgl.min.js</a> (e.g. <a href="https://github.com/greggman/twgl.js/releases/tag/v4.23.2">v4.23.2</a>) and append "&amp;GPU=y" after "?c=x.xxxx" in the URL. (experimental)</li>
 </ul>
 </p>
