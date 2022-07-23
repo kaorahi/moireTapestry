@@ -23,6 +23,8 @@
   }
   #blur, #speed {width: 20vmin;}
   #stopAuto {color: red;}
+  #coef {width: 7em;}
+  #coef[data-valid="no"] {background: pink;}
   .thin {opacity: 0.2;}
   #toast {
    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -88,6 +90,7 @@
   setCanvasSize(internalCanvas, galleryUnit, galleryPictureSize);
   const colorVec = getColorVectors();
   readURL();
+  updateCoef();
   insertGallery();
   warnSimilarGallery();
   initializeUI();
@@ -105,7 +108,7 @@
     const args = [coef, cv, unit || mainUnit];
     const usingGPU = drawGPU(...args) || drawCPU(...args);
     if (cv !== mainCanvas) {return;}
-    Q('#state').innerText = `c=${encodeCoef(coef)}${usingGPU ? ' (GPU)' : ''}`
+    Q('#state').innerText = usingGPU ? '(GPU) ' : '';
     updateDownloadLink();
   }
   
@@ -177,6 +180,7 @@
   // keyboard
   document.onkeydown = e => {
     stopAuto();
+    if (e.target.tagName === 'INPUT') {return;}
     switch (e.key) {
     case '<': addCoef(- kbdFastStep); break;
     case '>': addCoef(+ kbdFastStep); break;
@@ -221,6 +225,10 @@
     document.onclick = e =>
       (e.target.id !== 'startAuto') && (e.target.type !== 'range') && stopAuto();
     window.onpopstate = e => {readURL(); update();};
+    merge(Q('#coef'), {
+      oninput: setCoefByHand,
+      onkeydown: e => {e.key === 'Enter' && (e.target.blur(), updateCoef());},
+    });
     Q('#mod').innerText = colorTable.length;
     updateBlur();
     updateAutoSpeed();
@@ -229,6 +237,7 @@
     // assume "id in HTML" = "function name in JS"
     const buttonAction = {
       copyURL, newTab, nextGallery, prevGallery, startAuto, stopAuto,
+      copyCoef,
     }
     function onclick(action){return e => {stopAuto(); action(e);}}
     function setAction(id, action){Q('#' + id).onclick = onclick(action);}
@@ -256,7 +265,6 @@
   }
   
   // clipboard
-  function copyCoef() {copyToClipboard(encodeCoef(mainCoef));}
   function copyURL() {copyToClipboard(location.href);}
   function copyToClipboard(text) {
     updateURL();
@@ -265,7 +273,11 @@
   }
   
   // coef
-  function setCoef(newCoef) {mainCoef = newCoef; update();}
+  function setCoef(newCoef, byHand) {
+    mainCoef = newCoef;
+    update();
+    !byHand && updateCoef();
+  }
   function addCoef(d) {setCoef(mainCoef + d);}
   function normalizeMainCoef() {mainCoef = normalizeCoef(mainCoef);}
   function normalizeCoef(coef) {
@@ -276,6 +288,18 @@
   }
   function encodeCoef(num) {return num.toFixed(coefURLDigits);}
   function decodeCoef(str) {return toNum(str);}
+  function updateCoef() {
+    const form = Q('#coef'), val = encodeCoef(mainCoef);
+    form.value = val.includes('.') ? val.replace(/0+$/, '') : val;
+    form.dataset.valid = 'yes';
+  }
+  function setCoefByHand() {
+    const form = Q('#coef'), v = form.value, c = toNum(v);
+    const valid = v.match(/^\d+[.]?\d*$/) && !Number.isNaN(c);
+    form.dataset.valid = valid ? 'yes' : 'no'
+    valid && setCoef(c, true);
+  }
+  function copyCoef() {copyToClipboard(encodeCoef(mainCoef));}
   
   // graphics
   function setCanvasSize(canvas, unit, pictureSize) {
@@ -423,16 +447,19 @@
  <span class="thin" id="speedVal"></span>
  <button id="startAuto">Start Auto</button>
  <button id="stopAuto" hidden="true">Stop Auto</button>
+ &nbsp;
+ Samples
+ <button id="prevGallery">&lt;</button>
+ <button id="nextGallery">&gt;</button>
 </div>
 <p>
 <span id="state"></span>
+c=<input id="coef" type="number" min="0" step="0.0001">
+<button id="copyCoef">Copy</button>
+&nbsp;
 <button id="copyURL">Set &amp; Copy URL</button>
 <button id="newTab">New Tab</button>
 <a id="download">Download image</a>
-&nbsp;
-Samples
-<button id="prevGallery">&lt;</button>
-<button id="nextGallery">&gt;</button>
 </p>
 <h2>What is this?</h2>
 <p>
