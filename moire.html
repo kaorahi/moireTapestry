@@ -21,7 +21,8 @@
   #gallery img:hover {
     border: solid 2px blue; transform: scale(1.5); transition: transform 0.1s;
   }
-  #blur {width: 50vmin;}
+  #blur, #speed {width: 20vmin;}
+  #stopAuto {color: red;}
   .thin {opacity: 0.2;}
   #toast {
    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -55,6 +56,7 @@
   const kbdSlowStep = verticalDragStep;
   const kbdFineStep = kbdSlowStep * 0.1;
   const defaultBlur = 0.15, blurDigits = 2;
+  const defaultAutoSpeed = 5, autoStep = kbdFineStep * 0.05, autoMillisec = 100;
   
   // samples
   const galleryCoef = [
@@ -72,10 +74,12 @@
     11.1891, 11.3906, 11.6500, 11.6758, 11.6799, 11.8064,
   ].sort((a, b) => a - b);
   const galleryUnit = 1, galleryPictureSize = '5';
+  const defaultCoef = 3.6164;
   
   // state
-  let mainCoef = galleryCoef[0];
+  let mainCoef = defaultCoef;
   let useGPU = false;
+  let autoTimer = null;
   
   // init
   const mainCanvas = Q('#mainCanvas');
@@ -88,6 +92,7 @@
   warnSimilarGallery();
   initializeUI();
   update();
+  !location.search && startAuto();
   
   // main
   function update() {
@@ -171,6 +176,7 @@
   
   // keyboard
   document.onkeydown = e => {
+    stopAuto();
     switch (e.key) {
     case '<': addCoef(- kbdFastStep); break;
     case '>': addCoef(+ kbdFastStep); break;
@@ -183,19 +189,60 @@
     }
   }
   
+  // auto
+  function startAuto() {
+    cancelAuto();
+    const step = Math.pow(2, toNum(Q('#speed').value)) * autoStep;
+    autoTimer = setTimeout(() => {addCoef(step); startAuto();}, autoMillisec);
+    Q('#startAuto').hidden = true;
+    updateAutoButtons(true);
+  }
+  function stopAuto() {
+    cancelAuto();
+    updateAutoButtons(false);
+  }
+  function cancelAuto() {
+    autoTimer && clearTimeout(autoTimer);
+    autoTimer = null;
+  }
+  function updateAutoButtons(isStarted) {
+    Q('#startAuto').hidden = isStarted;
+    Q('#stopAuto').hidden = !isStarted;
+  }
+  function updateAutoSpeed() {
+    Q('#speedVal').innerText = Q('#speed').value.padStart(2, '0');
+    autoTimer && startAuto();
+  }
+  
   // UI parts
   function initializeUI() {
     initializeButtons();
+    initializeSliders();
+    document.onclick = e =>
+      (e.target.id !== 'startAuto') && (e.target.type !== 'range') && stopAuto();
     window.onpopstate = e => {readURL(); update();};
     Q('#mod').innerText = colorTable.length;
-    merge(Q('#blur'), {value: defaultBlur, oninput: updateBlur});
-    merge(Q('#gallerySize'), {value: galleryPictureSize, oninput: updateGallery});
     updateBlur();
+    updateAutoSpeed();
   }
   function initializeButtons() {
     // assume "id in HTML" = "function name in JS"
-    const buttonAction = {copyURL, newTab, nextGallery, prevGallery}
-    eachKeyValue(buttonAction, id => {Q('#' + id).onclick = buttonAction[id];});
+    const buttonAction = {
+      copyURL, newTab, nextGallery, prevGallery, startAuto, stopAuto,
+    }
+    function onclick(action){return e => {stopAuto(); action(e);}}
+    function setAction(id, action){Q('#' + id).onclick = onclick(action);}
+    eachKeyValue(buttonAction, setAction);
+  }
+  function initializeSliders() {
+    const sliderTable = [
+      // id, value, oninput
+      ['blur', defaultBlur, updateBlur],
+      ['speed', defaultAutoSpeed, updateAutoSpeed],
+      ['gallerySize', galleryPictureSize, updateGallery],
+    ];
+    function setup([id, value, oninput]) {merge(Q('#' + id), {value, oninput});}
+    sliderTable.forEach(setup);
   }
   function updateBlur() {
     const b = Q('#blur').value;
@@ -371,6 +418,11 @@
 <div>
  blur <input id="blur" type="range" min="0" max="1" step="0.01"></input>
  <span class="thin" id="blurVal"></span>
+ &nbsp;
+ speed <input id="speed" type="range" min="1" max="15" step="1"></input>
+ <span class="thin" id="speedVal"></span>
+ <button id="startAuto">Start Auto</button>
+ <button id="stopAuto" hidden="true">Stop Auto</button>
 </div>
 <p>
 <span id="state"></span>
