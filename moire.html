@@ -334,7 +334,7 @@
     replaceMainCanvas();
     setCanvasSize(mainCanvas, mainUnit, mainPictureSize);
     setCanvasSize(internalCanvas, galleryUnit, galleryPictureSize);
-    colorVec = getColorVectors();
+    colorVec = getColorVectors(colorTable);
     Q('#mod').innerText = colorTable.length;
     setMouseActions(mainCanvas);
     updateBlur();
@@ -355,13 +355,15 @@
     g.fillStyle = style;
     g.beginPath(); g.rect(x, y, size, size); g.fill();
   }
-  function getColorVectors() {
+  function getColorVectors(colors) {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const ctx = canvas.getContext('2d');
     function rgbaVec(colorString) {
-      const ctx = internalCanvas.getContext('2d');
       fillSquare(ctx, 0, 0, 1, colorString);
       return [...ctx.getImageData(0, 0, 1, 1).data];
     }
-    return colorTable.map(rgbaVec);
+    return colors.map(rgbaVec);
   }
   
   // URL
