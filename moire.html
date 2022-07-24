@@ -165,12 +165,12 @@
   }
   
   // drag
-  function setMouseActions() {
+  function setMouseActions(canvas) {
     let prevPoint = null;
     function eventPoint(e) {return {x: e.clientX, y: e.clientY};}
-    mainCanvas.onmousedown = e => {prevPoint = eventPoint(e);}
-    mainCanvas.onmouseleave = document.onmouseup = e => {prevPoint = null; update();}
-    mainCanvas.onmousemove = e => {
+    canvas.onmousedown = e => {prevPoint = eventPoint(e);}
+    canvas.onmouseleave = document.onmouseup = e => {prevPoint = null; update();}
+    canvas.onmousemove = e => {
       if (!prevPoint) {return;}
       const point = eventPoint(e);
       const [dx, dy] = [point.x - prevPoint.x, - (point.y - prevPoint.y)];
@@ -178,11 +178,12 @@
       addCoef(horizontal ? dx * horizontalDragStep : dy * verticalDragStep);
       prevPoint = point;
     }
-    mainCanvas.onwheel = e => {e.preventDefault(); addCoef(e.deltaY * wheelStep);}
+    canvas.onwheel = e => {e.preventDefault(); addCoef(e.deltaY * wheelStep);}
+    setSwipeActions(canvas);
   }
   
   // swipe
-  function setSwipeActions() {
+  function setSwipeActions(canvas) {
     const touchEquiv = [
       // ontouchXXX <==> onmouseXXX
       ['start', 'down'],
@@ -191,10 +192,10 @@
       ['cancel', 'leave'],
     ];
     touchEquiv.forEach(([touchName, mouseName]) => {
-      mainCanvas['ontouch' + touchName] = e => {
+      canvas['ontouch' + touchName] = e => {
         const t = e.changedTouches[0];  // ignore multi-touch
         if (!t) {return;}
-        mainCanvas['onmouse' + mouseName](t);
+        canvas['onmouse' + mouseName](t);
         e.preventDefault();
       }
     });
@@ -335,8 +336,7 @@
     setCanvasSize(internalCanvas, galleryUnit, galleryPictureSize);
     colorVec = getColorVectors();
     Q('#mod').innerText = colorTable.length;
-    setMouseActions();
-    setSwipeActions();
+    setMouseActions(mainCanvas);
     updateBlur();
   }
   function replaceMainCanvas() {
