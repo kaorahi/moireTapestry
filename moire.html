@@ -179,7 +179,7 @@
   
   // keyboard
   document.onkeydown = e => {
-    stopAuto();
+    const isStopped = stopAuto();
     if (e.target.tagName === 'INPUT') {return;}
     switch (e.key) {
     case '<': addCoef(- kbdFastStep); break;
@@ -189,6 +189,7 @@
     case '[': addCoef(- kbdFineStep); break;
     case ']': addCoef(+ kbdFineStep); break;
     case 'c': copyCoef(); break;
+    case 'a': !isStopped && startAuto(); break;
     case 'V': e.ctrlKey && (openVariations(), e.preventDefault()); break;
     }
   }
@@ -202,8 +203,10 @@
     updateAutoButtons(true);
   }
   function stopAuto() {
+    const isStopped = !!autoTimer;
     cancelAuto();
     updateAutoButtons(false);
+    return isStopped;
   }
   function cancelAuto() {
     autoTimer && clearTimeout(autoTimer);
@@ -488,6 +491,7 @@ for the given parameter c.
  <li>Slow change: vertical drag or ',' / '.' key</li>
  <li>Fine tuning: mouse wheel or '[' / ']' key</li>
  <li>Copy c to clipboard: 'c' key</li>
+ <li>Toggle auto: 'a' key</li>
  <li class="thin">Open variations in new tabs: 'Ctrl-Shift-v' key (may be blocked by the browser)</li>
  <li class="thin">Enable GPU: Get <a href="https://twgljs.org/">twgl.min.js</a> (e.g. <a href="https://github.com/greggman/twgl.js/releases/tag/v4.23.2">v4.23.2</a>) and append "&amp;GPU=y" after "?c=x.xxxx" in the URL. (experimental)</li>
 </ul>
