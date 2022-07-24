@@ -214,6 +214,7 @@
     case ']': addCoef(+ kbdFineStep); break;
     case 'c': copyCoef(); break;
     case 'a': !isStopped && startAuto(); break;
+    case 'f': mainCanvas.requestFullscreen(); break;
     case 'C': colorTable = rotate(colorTable, colorTableList); update(true); break;
     case 'R': [resolution, mainUnit] = rotate([resolution, mainUnit], resolutionList); update(true); break;
     case 'V': e.ctrlKey && (openVariations(), e.preventDefault()); break;
@@ -544,6 +545,7 @@ from just one parameter c without randomness.
  <li>Fine tuning: mouse wheel or '[' / ']' key</li>
  <li>Copy c to clipboard: 'c' key</li>
  <li>Toggle auto: 'a' key</li>
+ <li>Full screen: 'f' key</li>
 </ul>
 <h3 class="thin">(experimental)</h3>
 <ul class="thin">
