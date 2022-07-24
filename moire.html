@@ -41,14 +41,34 @@
  window.onload = () => {
   
   // param
-  const resolution = 101, mainUnit = 4;
+  const resolutionList = [[101, 4], [151, 4], [201, 2], [401, 1], [51, 8]];
+  let [resolution, mainUnit] = resolutionList[0];
   const mainPictureSize = '70vmin';
-  const colorTable = [
-    'white', 'orange', 'white', 'pink', 'white', 'red',
-    'white', 'magenta', 'white', 'yellow', 'white', 'blue',
-    //'white', 'brown', 'orange', 'white', 'pink', 'red',
-    //'white', 'khaki', 'magenta', 'white', 'yellow', 'blue',
+  const colorTableList = [
+    [
+      'white', 'orange', 'white', 'pink', 'white', 'red',
+      'white', 'magenta', 'white', 'yellow', 'white', 'blue',
+    ],
+    [
+      'white', 'brown', 'orange', 'white', 'pink', 'red',
+      'white', 'khaki', 'magenta', 'white', 'yellow', 'blue',
+    ],
+    [
+      '#fc9', '#f96', '#c33', '#633', '#cff', '#fff',
+      '#fc9', '#f96', '#c33', '#633', '#cff', '#fff',
+    ],
+    [
+      'black', 'white', 'white', 'white',
+      'black', 'white', 'white', 'white',
+      'black', 'white', 'white', 'white',
+    ],
+    [
+      '#f00', '#fff', '#fff', '#fff',
+      '#366', '#fff', '#fff', '#f60',
+      '#00c', '#fff', '#fff', '#fff',
+    ],
   ];
+  let colorTable = colorTableList[0];
   const similarCoefDelta = [6];  // (coef + delta) gives almost similar result
   const coefURLDigits = 7;
   const horizontalDragStep = 0.01;
@@ -84,12 +104,10 @@
   let autoTimer = null;
   
   // init
-  const mainCanvas = Q('#mainCanvas');
   const internalCanvas = document.createElement('canvas');
-  setCanvasSize(mainCanvas, mainUnit, mainPictureSize);
-  setCanvasSize(internalCanvas, galleryUnit, galleryPictureSize);
-  const colorVec = getColorVectors();
+  let mainCanvas, colorVec;
   readURL();
+  updateCanvas();
   updateCoefForm();
   insertGallery();
   warnSimilarGallery();
@@ -98,7 +116,8 @@
   !location.search && startAuto();
   
   // main
-  function update() {
+  function update(isNewSetting) {
+    isNewSetting && updateCanvas();
     normalizeMainCoef();
     draw(mainCoef);
     updateGallery();
@@ -146,36 +165,40 @@
   }
   
   // drag
-  let prevPoint = null;
-  function eventPoint(e) {return {x: e.clientX, y: e.clientY};}
-  mainCanvas.onmousedown = e => {prevPoint = eventPoint(e);}
-  mainCanvas.onmouseleave = document.onmouseup = e => {prevPoint = null; update();}
-  mainCanvas.onmousemove = e => {
-    if (!prevPoint) {return;}
-    const point = eventPoint(e);
-    const [dx, dy] = [point.x - prevPoint.x, - (point.y - prevPoint.y)];
-    const horizontal = Math.abs(dx) > Math.abs(dy);
-    addCoef(horizontal ? dx * horizontalDragStep : dy * verticalDragStep);
-    prevPoint = point;
+  function setMouseActions() {
+    let prevPoint = null;
+    function eventPoint(e) {return {x: e.clientX, y: e.clientY};}
+    mainCanvas.onmousedown = e => {prevPoint = eventPoint(e);}
+    mainCanvas.onmouseleave = document.onmouseup = e => {prevPoint = null; update();}
+    mainCanvas.onmousemove = e => {
+      if (!prevPoint) {return;}
+      const point = eventPoint(e);
+      const [dx, dy] = [point.x - prevPoint.x, - (point.y - prevPoint.y)];
+      const horizontal = Math.abs(dx) > Math.abs(dy);
+      addCoef(horizontal ? dx * horizontalDragStep : dy * verticalDragStep);
+      prevPoint = point;
+    }
+    mainCanvas.onwheel = e => {e.preventDefault(); addCoef(e.deltaY * wheelStep);}
   }
-  mainCanvas.onwheel = e => {e.preventDefault(); addCoef(e.deltaY * wheelStep);}
   
   // swipe
-  const touchEquiv = [
-    // ontouchXXX <==> onmouseXXX
-    ['start', 'down'],
-    ['move', 'move'],
-    ['end', 'leave'],
-    ['cancel', 'leave'],
-  ];
-  touchEquiv.forEach(([touchName, mouseName]) => {
-    mainCanvas['ontouch' + touchName] = e => {
-      const t = e.changedTouches[0];  // ignore multi-touch
-      if (!t) {return;}
-      mainCanvas['onmouse' + mouseName](t);
-      e.preventDefault();
-    }
-  });
+  function setSwipeActions() {
+    const touchEquiv = [
+      // ontouchXXX <==> onmouseXXX
+      ['start', 'down'],
+      ['move', 'move'],
+      ['end', 'leave'],
+      ['cancel', 'leave'],
+    ];
+    touchEquiv.forEach(([touchName, mouseName]) => {
+      mainCanvas['ontouch' + touchName] = e => {
+        const t = e.changedTouches[0];  // ignore multi-touch
+        if (!t) {return;}
+        mainCanvas['onmouse' + mouseName](t);
+        e.preventDefault();
+      }
+    });
+  }
   
   // keyboard
   document.onkeydown = e => {
@@ -190,6 +213,8 @@
     case ']': addCoef(+ kbdFineStep); break;
     case 'c': copyCoef(); break;
     case 'a': !isStopped && startAuto(); break;
+    case 'C': colorTable = rotate(colorTable, colorTableList); update(true); break;
+    case 'R': [resolution, mainUnit] = rotate([resolution, mainUnit], resolutionList); update(true); break;
     case 'V': e.ctrlKey && (openVariations(), e.preventDefault()); break;
     }
   }
@@ -232,7 +257,6 @@
       oninput: setCoefByForm,
       onkeydown: e => {e.key === 'Enter' && (e.target.blur(), updateCoefForm());},
     });
-    Q('#mod').innerText = colorTable.length;
     updateBlur();
     updateAutoSpeed();
   }
@@ -304,11 +328,29 @@
   }
   function copyCoef() {copyToClipboard(encodeCoef(mainCoef));}
   
-  // graphics
+  // canvas
+  function updateCanvas() {
+    replaceMainCanvas();
+    setCanvasSize(mainCanvas, mainUnit, mainPictureSize);
+    setCanvasSize(internalCanvas, galleryUnit, galleryPictureSize);
+    colorVec = getColorVectors();
+    Q('#mod').innerText = colorTable.length;
+    setMouseActions();
+    setSwipeActions();
+    updateBlur();
+  }
+  function replaceMainCanvas() {
+    mainCanvas && mainCanvas.remove();
+    mainCanvas = document.createElement('canvas');
+    mainCanvas.id = 'mainCanvas';
+    Q('#mainCanvasContainer').appendChild(mainCanvas);
+  }
   function setCanvasSize(canvas, unit, pictureSize) {
     canvas.width = canvas.height = resolution * unit;
     canvas.style.width = canvas.style.height = pictureSize;
   }
+  
+  // graphics
   function fillSquare(g, x, y, size, style) {
     g.fillStyle = style;
     g.beginPath(); g.rect(x, y, size, size); g.fill();
@@ -415,6 +457,10 @@
   function merge(target, ...sources) {Object.assign(target, ...sources);}
   function eachKeyValue(h, f) {Object.keys(h).forEach(k => f(k, h[k]));}
   function toNum(str) {return str - 0;}
+  function rotate(cur, lis) {
+    const conv = JSON.stringify;
+    return lis[(lis.map(conv).indexOf(conv(cur)) + 1) % lis.length];
+  }
  }
  </script>
  <script defer src="twgl.min.js"></script>
@@ -441,7 +487,7 @@
 <p id="instruction">
  Drag the mouse on the picture! (wheel: fine tuning)
 </p>
-<div id="mainCanvasContainer"><canvas id="mainCanvas"></canvas></div>
+<div id="mainCanvasContainer"></div>
 <div>
  blur <input id="blur" type="range" min="0" max="1" step="0.01"></input>
  <span class="thin" id="blurVal"></span>
@@ -492,8 +538,12 @@ for the given parameter c.
  <li>Fine tuning: mouse wheel or '[' / ']' key</li>
  <li>Copy c to clipboard: 'c' key</li>
  <li>Toggle auto: 'a' key</li>
- <li class="thin">Open variations in new tabs: 'Ctrl-Shift-v' key (may be blocked by the browser)</li>
- <li class="thin">Enable GPU: Get <a href="https://twgljs.org/">twgl.min.js</a> (e.g. <a href="https://github.com/greggman/twgl.js/releases/tag/v4.23.2">v4.23.2</a>) and append "&amp;GPU=y" after "?c=x.xxxx" in the URL. (experimental)</li>
+</ul>
+<h3 class="thin">(experimental)</h3>
+<ul class="thin">
+ <li>Switch colors / resolutions: 'Shift-c' / 'Shift-r' key</li>
+ <li>Open variations in new tabs: 'Ctrl-Shift-v' key (may be blocked by the browser)</li>
+ <li>Enable GPU: Get <a href="https://twgljs.org/">twgl.min.js</a> (e.g. <a href="https://github.com/greggman/twgl.js/releases/tag/v4.23.2">v4.23.2</a>) and append "&amp;GPU=y" after "?c=x.xxxx" in the URL.</li>
 </ul>
 </p>
 <h2>Samples</h2>
