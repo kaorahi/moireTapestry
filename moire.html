@@ -290,7 +290,7 @@
   function decodeCoef(str) {return toNum(str);}
   function updateCoef() {
     const form = Q('#coef'), val = encodeCoef(mainCoef);
-    form.value = val.includes('.') ? val.replace(/0+$/, '') : val;
+    form.value = val.includes('.') ? val.replace(/0+$/, '').replace(/[.]$/, '') : val;
     form.dataset.valid = 'yes';
   }
   function setCoefByHand() {
