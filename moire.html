@@ -90,7 +90,7 @@
   setCanvasSize(internalCanvas, galleryUnit, galleryPictureSize);
   const colorVec = getColorVectors();
   readURL();
-  updateCoef();
+  updateCoefForm();
   insertGallery();
   warnSimilarGallery();
   initializeUI();
@@ -226,8 +226,8 @@
       (e.target.id !== 'startAuto') && (e.target.type !== 'range') && stopAuto();
     window.onpopstate = e => {readURL(); update();};
     merge(Q('#coef'), {
-      oninput: setCoefByHand,
-      onkeydown: e => {e.key === 'Enter' && (e.target.blur(), updateCoef());},
+      oninput: setCoefByForm,
+      onkeydown: e => {e.key === 'Enter' && (e.target.blur(), updateCoefForm());},
     });
     Q('#mod').innerText = colorTable.length;
     updateBlur();
@@ -273,10 +273,10 @@
   }
   
   // coef
-  function setCoef(newCoef, byHand) {
+  function setCoef(newCoef, byForm) {
     mainCoef = newCoef;
     update();
-    !byHand && updateCoef();
+    !byForm && updateCoefForm();
   }
   function addCoef(d) {setCoef(mainCoef + d);}
   function normalizeMainCoef() {mainCoef = normalizeCoef(mainCoef);}
@@ -288,12 +288,12 @@
   }
   function encodeCoef(num) {return num.toFixed(coefURLDigits);}
   function decodeCoef(str) {return toNum(str);}
-  function updateCoef() {
+  function updateCoefForm() {
     const form = Q('#coef'), val = encodeCoef(mainCoef);
     form.value = val.includes('.') ? val.replace(/0+$/, '').replace(/[.]$/, '') : val;
     form.dataset.valid = 'yes';
   }
-  function setCoefByHand() {
+  function setCoefByForm() {
     const form = Q('#coef'), v = form.value, c = toNum(v);
     const valid = v.match(/^\d+[.]?\d*$/) && !Number.isNaN(c);
     form.dataset.valid = valid ? 'yes' : 'no'
