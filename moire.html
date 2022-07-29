@@ -226,7 +226,7 @@
     case ']': addCoef(+ kbdFineStep); break;
     case 'c': copyCoef(); break;
     case 'a': !isStopped && startAuto(); break;
-    case 'f': fullScreen(); break;
+    case 'f': toggleFullScreen(); break;
     case 'C': colorTable = rotate(colorTable, colorTableList); update(true); break;
     case 'R': [resolution, mainUnit] = rotate([resolution, mainUnit], resolutionList); update(true); break;
     case 'V': e.ctrlKey && (openVariations(), e.preventDefault()); break;
@@ -305,6 +305,9 @@
     merge(Q('#download'), {href, download});
   }
   function fullScreen() {mainCanvas.requestFullscreen();}
+  function toggleFullScreen() {
+    document.fullscreenElement ? document.exitFullscreen() : fullScreen();
+  }
   
   // clipboard
   function copyURL() {copyToClipboard(location.href);}
@@ -558,7 +561,7 @@ from just one parameter c without randomness.
  <li>Fine tuning: mouse wheel or '[' / ']' key</li>
  <li>Copy c to clipboard: 'c' key</li>
  <li>Toggle auto: 'a' key</li>
- <li>Full screen: 'f' key</li>
+ <li>Toggle full screen: 'f' key</li>
 </ul>
 <h3 class="thin">(experimental)</h3>
 <ul class="thin">
