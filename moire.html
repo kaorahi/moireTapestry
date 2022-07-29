@@ -381,11 +381,12 @@
     url !== location.href && history.pushState(null, document.title, url);
   }
   function generateURL(coef) {
+    const url = new URL(location.toString());
     const params = new URLSearchParams('');
     params.append('c', encodeCoef(coef));
     useGPU && params.append('GPU', 'y');
-    const {protocol, host, pathname} = location;
-    return protocol + '//' + host + pathname + '?' + params.toString();
+    url.search = params.toString();
+    return url.toString();
   }
   
   // new tab
