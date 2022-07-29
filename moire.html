@@ -91,6 +91,7 @@
   const kbdFineStep = kbdSlowStep * 0.1;
   const defaultBlur = 0.15, blurDigits = 2;
   const defaultAutoSpeed = 5, autoStep = kbdFineStep * 0.05, autoMillisec = 100;
+  const doubleTapMillisec = 500, doubleTapDistance = 100;
   
   // samples
   const galleryCoef = [
@@ -179,12 +180,11 @@
   // drag
   function setMouseActions(canvas) {
     let prevPoint = null;
-    function eventPoint(e) {return {x: e.clientX, y: e.clientY};}
-    canvas.onmousedown = e => {prevPoint = eventPoint(e);}
+    canvas.onmousedown = e => {prevPoint = mouseEventPoint(e);}
     canvas.onmouseleave = document.onmouseup = e => {prevPoint = null; update();}
     canvas.onmousemove = e => {
       if (!prevPoint) {return;}
-      const point = eventPoint(e);
+      const point = mouseEventPoint(e);
       const [dx, dy] = [point.x - prevPoint.x, - (point.y - prevPoint.y)];
       const horizontal = Math.abs(dx) > Math.abs(dy);
       addCoef(horizontal ? dx * horizontalDragStep : dy * verticalDragStep);
@@ -193,24 +193,55 @@
     canvas.onwheel = e => {e.preventDefault(); addCoef(e.deltaY * wheelStep);}
     setSwipeActions(canvas);
   }
+  function mouseEventPoint(e) {return {x: e.clientX, y: e.clientY};}
   
   // swipe
   function setSwipeActions(canvas) {
+    // accept swipe only after double tap
+    let swipable = false, lastTap = null;
     const touchEquiv = [
-      // ontouchXXX <==> onmouseXXX
-      ['start', 'down'],
-      ['move', 'move'],
-      ['end', 'leave'],
-      ['cancel', 'leave'],
+      // [ontouchXXX, onmouseXXX, preProc, postProc]
+      ['start', 'down', startTouch, null],
+      ['move', 'move', null, null],
+      ['end', 'leave', null, endTouch],
+      ['cancel', 'leave', null, endTouch],
     ];
-    touchEquiv.forEach(([touchName, mouseName]) => {
+    touchEquiv.forEach(([touchName, mouseName, preProc, postProc]) => {
+      function maybe(f, ...a) {f && f(...a);}
       canvas['ontouch' + touchName] = e => {
         const t = e.changedTouches[0];  // ignore multi-touch
         if (!t) {return;}
+        maybe(preProc, t);
+        if (!swipable) {return;}
         canvas['onmouse' + mouseName](t);
         e.preventDefault();
+        maybe(postProc);
       }
     });
+    // detect double tap
+    function startTouch(e) {
+      if (swipable) {return;}
+      const time = Date.now(), point = mouseEventPoint(e);
+      const immediate = lastTap && (time - lastTap.time <= doubleTapMillisec);
+      const isDoubleTap = immediate && near(point, lastTap.point);
+      const isNewTap = !isDoubleTap;
+      swipable = isDoubleTap;
+      lastTap = isNewTap && {time, point};
+      isNewTap ? showDoubleTapHint() : cancelDoubleTapHint();
+    }
+    function endTouch() {swipable = false;}
+    function near(a, b) {
+      function near1(key) {return Math.abs(a[key] - b[key]) <= doubleTapDistance;}
+      return ['x', 'y'].every(near1);
+    }
+    // show hint
+    let doubleTapHintTimer = null;
+    function showDoubleTapHint() {
+      const show = () => toast('Double Tap & Swipe!');
+      cancelDoubleTapHint();
+      doubleTapHintTimer = setTimeout(show, doubleTapMillisec * 1.1);
+    }
+    function cancelDoubleTapHint() {clearTimeout(doubleTapHintTimer);}
   }
   
   // keyboard
