@@ -181,7 +181,7 @@
   function setMouseActions(canvas) {
     let prevPoint = null;
     canvas.onmousedown = e => {prevPoint = mouseEventPoint(e);}
-    canvas.onmouseleave = document.onmouseup = e => {prevPoint = null; update();}
+    canvas.onmouseleave = document.onmouseup = e => {prevPoint = null;}
     canvas.onmousemove = e => {
       if (!prevPoint) {return;}
       const point = mouseEventPoint(e);
