@@ -255,6 +255,8 @@
     case '.': addCoef(+ kbdSlowStep); break;
     case '[': addCoef(- kbdFineStep); break;
     case ']': addCoef(+ kbdFineStep); break;
+    case '(': prevGallery(); break;
+    case ')': nextGallery(); break;
     case 'c': copyCoef(); break;
     case 'a': !isStopped && startAuto(); break;
     case 'f': toggleFullScreen(); break;
@@ -592,6 +594,7 @@ from just one parameter c without randomness.
  <li>Fast change: horizontal drag or '<' / '>' key</li>
  <li>Slow change: vertical drag or ',' / '.' key</li>
  <li>Fine tuning: mouse wheel or '[' / ']' key</li>
+ <li>Next/Previous sample: '(' / ')' key</li>
  <li>Copy c to clipboard: 'c' key</li>
  <li>Toggle auto: 'a' key</li>
  <li>Toggle full screen: 'f' key</li>
