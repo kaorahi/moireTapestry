@@ -159,7 +159,7 @@
     return false;
   }
   function drawGPU(coef, canvas, unit) {
-    if (!useGPU || typeof twgl === 'undefined') {return false;}
+    if (!useGPU || !isTwglAvailable()) {return false;}
     const gl = canvas.getContext('webgl');
     if (!gl) {return false;}
     const shaders = ['vertex_shader', 'fragment_shader'];
@@ -176,6 +176,7 @@
     twgl.drawBufferInfo(gl, bufferInfo, gl.TRIANGLE_STRIP);
     return true;
   }
+  function isTwglAvailable() {return typeof twgl !== 'undefined';}
   
   // drag
   function setMouseActions(canvas) {
@@ -263,6 +264,7 @@
     case 'C': colorTable = rotate(colorTable, colorTableList); update(true); break;
     case 'R': [resolution, mainUnit] = rotate([resolution, mainUnit], resolutionList); update(true); break;
     case 'V': e.ctrlKey && (openVariations(), e.preventDefault()); break;
+    case 'G': e.ctrlKey && (toggleGPU(), e.preventDefault()); break;
     }
   }
   
@@ -339,6 +341,14 @@
     const download = `tapestry${encodeCoef(mainCoef)}.png`;
     merge(Q('#download'), {href, download});
   }
+  function toggleGPU() {
+    if (!isTwglAvailable()) {toast('Missing TWGL.js'); return;}
+    useGPU = !useGPU;
+    removeMainCanvas(); // force reset
+    update(true);
+    updateURL();
+    toast(useGPU ? 'GPU' : 'CPU');
+  }
   function fullScreen() {mainCanvas.requestFullscreen();}
   function toggleFullScreen() {
     document.fullscreenElement ? document.exitFullscreen() : fullScreen();
@@ -392,10 +402,14 @@
     updateBlur();
   }
   function replaceMainCanvas() {
-    mainCanvas && mainCanvas.remove();
+    removeMainCanvas();
     mainCanvas = document.createElement('canvas');
     mainCanvas.id = 'mainCanvas';
     Q('#mainCanvasContainer').appendChild(mainCanvas);
+  }
+  function removeMainCanvas() {
+    mainCanvas && mainCanvas.remove();
+    mainCanvas = null;
   }
   function setCanvasSize(canvas, unit, pictureSize) {
     canvas.width = canvas.height = resolution * unit;
@@ -603,7 +617,7 @@ from just one parameter c without randomness.
 <ul class="thin">
  <li>Switch colors / resolutions: 'Shift-c' / 'Shift-r' key</li>
  <li>Open variations in new tabs: 'Ctrl-Shift-v' key (may be blocked by the browser)</li>
- <li>Enable GPU: Get <a href="https://twgljs.org/">twgl.min.js</a> (e.g. <a href="https://github.com/greggman/twgl.js/releases/tag/v4.23.2">v4.23.2</a>) and append "&amp;GPU=y" after "?c=x.xxxx" in the URL.</li>
+ <li>Toggle GPU: 'Ctrl-Shift-g' key (needs <a href="https://twgljs.org/">twgl.min.js</a>, e.g. <a href="https://github.com/greggman/twgl.js/releases/tag/v4.23.2">v4.23.2</a>)</li>
 </ul>
 </p>
 <h2>Link</h2>
