@@ -265,8 +265,10 @@
   function initializeUI() {
     initializeButtons();
     initializeSliders();
-    document.onclick = e =>
+    function stopAutoMaybe(e) {
       !keepAuto.includes(e.target.id) && (e.target.type !== 'range') && stopAuto();
+    }
+    document.addEventListener('click', stopAutoMaybe);
     window.onpopstate = e => {readURL(); update();};
     merge(Q('#coef'), {
       oninput: setCoefByForm,
