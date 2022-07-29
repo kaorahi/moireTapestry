@@ -5,7 +5,7 @@
  <title>Moire Tapestry</title>
  <style>
   #mainCanvasContainer {
-    display: inline-block; margin-left: 1em; margin-bottom: 1em; padding: none;
+    display: inline-block; margin-bottom: 0.5em; padding: none;
     border: 1px solid black;
     box-shadow: 2px 6px 10px gray; transition: box-shadow 0.2s;
   }
@@ -21,8 +21,11 @@
   #gallery img:hover {
     border: solid 2px blue; transform: scale(1.5); transition: transform 0.1s;
   }
-  #blur, #speed {width: 20vmin;}
-  #stopAuto {color: red;}
+  #control {
+    display: inline-block; text-align: center; padding: 2vmin; background: #ccc;
+    border-radius: 1vmin;
+  }
+  #blur, #speed {width: 15vmin;}
   #coef {width: 7em;}
   #coef[data-valid="no"] {background: pink;}
   .thin {opacity: 0.2;}
@@ -35,6 +38,15 @@
    font-size: 200%; color: white; background-color: black;
    padding: 0.5em; border-radius: 1em; z-index: 9; position: relative;
   }
+  .tooltip-origin {position: relative; display: inline-block;}
+  [data-tooltip] {width: 2em; height: 2em;}
+  [data-tooltip]:hover:after {
+   content: attr(data-tooltip); display: inline-block; position: absolute;
+   background-color: #ff9; padding: 0.2em;
+   z-index: 9; top: 2em; left: 0em; white-space: nowrap;
+  }
+  [data-tooltip]:after {content: "";}
+
  </style>
  <script>
  'use strict'
@@ -214,7 +226,7 @@
     case ']': addCoef(+ kbdFineStep); break;
     case 'c': copyCoef(); break;
     case 'a': !isStopped && startAuto(); break;
-    case 'f': mainCanvas.requestFullscreen(); break;
+    case 'f': fullScreen(); break;
     case 'C': colorTable = rotate(colorTable, colorTableList); update(true); break;
     case 'R': [resolution, mainUnit] = rotate([resolution, mainUnit], resolutionList); update(true); break;
     case 'V': e.ctrlKey && (openVariations(), e.preventDefault()); break;
@@ -249,11 +261,12 @@
   }
   
   // UI parts
+  const keepAuto = ['startAuto', 'fullScreen'];
   function initializeUI() {
     initializeButtons();
     initializeSliders();
     document.onclick = e =>
-      (e.target.id !== 'startAuto') && (e.target.type !== 'range') && stopAuto();
+      !keepAuto.includes(e.target.id) && (e.target.type !== 'range') && stopAuto();
     window.onpopstate = e => {readURL(); update();};
     merge(Q('#coef'), {
       oninput: setCoefByForm,
@@ -266,10 +279,9 @@
     // assume "id in HTML" = "function name in JS"
     const buttonAction = {
       copyURL, newTab, nextGallery, prevGallery, startAuto, stopAuto,
-      copyCoef,
+      copyCoef, fullScreen,
     }
-    function onclick(action){return e => {stopAuto(); action(e);}}
-    function setAction(id, action){Q('#' + id).onclick = onclick(action);}
+    function setAction(id, action){Q('#' + id).onclick = action;}
     eachKeyValue(buttonAction, setAction);
   }
   function initializeSliders() {
@@ -292,6 +304,7 @@
     const download = `tapestry${encodeCoef(mainCoef)}.png`;
     merge(Q('#download'), {href, download});
   }
+  function fullScreen() {mainCanvas.requestFullscreen();}
   
   // clipboard
   function copyURL() {copyToClipboard(location.href);}
@@ -491,19 +504,18 @@
 <p id="instruction">
  Drag the mouse on the picture! (wheel: fine tuning)
 </p>
+<div id="control">
 <div id="mainCanvasContainer"></div>
 <div>
- blur <input id="blur" type="range" min="0" max="1" step="0.01"></input>
- <span class="thin" id="blurVal"></span>
- &nbsp;
+ <div class="tooltip-origin"><button id="startAuto" data-tooltip="Start Auto">▶</button><button id="stopAuto" hidden="true" data-tooltip="Stop Auto">⏸</button></div>
  speed <input id="speed" type="range" min="1" max="15" step="1"></input>
  <span class="thin" id="speedVal"></span>
- <button id="startAuto">Start Auto</button>
- <button id="stopAuto" hidden="true">Stop Auto</button>
- &nbsp;
- Samples
- <button id="prevGallery">&lt;</button>
- <button id="nextGallery">&gt;</button>
+ blur <input id="blur" type="range" min="0" max="1" step="0.01"></input>
+ <span class="thin" id="blurVal"></span>
+ <div class="tooltip-origin"><button id="prevGallery" data-tooltip="Previous Sample">&lt;</button></div>
+ <div class="tooltip-origin"><button id="nextGallery" data-tooltip="Next Sample">&gt;</button></div>
+ <div class="tooltip-origin"><button id="fullScreen" data-tooltip="Full Screen">⤢</button></div>
+</div>
 </div>
 <p>
 <span id="state"></span>
