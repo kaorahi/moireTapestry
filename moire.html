@@ -393,7 +393,9 @@
   
   // canvas
   function updateCanvas() {
-    replaceMainCanvas();
+    const w = expectedCanvasWidth(mainUnit);
+    const resized = !mainCanvas || (mainCanvas.width !== w);
+    resized && replaceMainCanvas(); // for GPU
     setCanvasSize(mainCanvas, mainUnit, mainPictureSize);
     setCanvasSize(internalCanvas, galleryUnit, galleryPictureSize);
     colorVec = getColorVectors(colorTable);
@@ -412,9 +414,10 @@
     mainCanvas = null;
   }
   function setCanvasSize(canvas, unit, pictureSize) {
-    canvas.width = canvas.height = resolution * unit;
+    canvas.width = canvas.height = expectedCanvasWidth(unit);
     canvas.style.width = canvas.style.height = pictureSize;
   }
+  function expectedCanvasWidth(unit) {return resolution * unit;}
   
   // graphics
   function fillSquare(g, x, y, size, style) {
