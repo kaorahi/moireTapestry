@@ -90,7 +90,7 @@
   const kbdSlowStep = verticalDragStep;
   const kbdFineStep = kbdSlowStep * 0.1;
   const defaultBlur = 0.15, blurDigits = 2;
-  const defaultAutoSpeed = 5, autoStep = kbdFineStep * 0.05, autoMillisec = 100;
+  const defaultAutoSpeed = 7, autoStep = wheelStep, autoMillisec = 100;
   const doubleTapMillisec = 500, doubleTapDistance = 100;
   
   // samples
@@ -560,7 +560,7 @@
 <div id="mainCanvasContainer"></div>
 <div>
  <div class="tooltip-origin"><button id="startAuto" data-tooltip="Start Auto">▶</button><button id="stopAuto" hidden="true" data-tooltip="Stop Auto">⏸</button></div>
- speed <input id="speed" type="range" min="1" max="15" step="1"></input>
+ speed <input id="speed" type="range" min="1" max="20" step="1"></input>
  <span class="thin" id="speedVal"></span>
  blur <input id="blur" type="range" min="0" max="1" step="0.01"></input>
  <span class="thin" id="blurVal"></span>
