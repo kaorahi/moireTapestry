@@ -28,6 +28,8 @@
   #blur, #speed {width: 15vmin;}
   #coef {width: 7em;}
   #coef[data-valid="no"] {background: pink;}
+  #download + span {display: none;}
+  #download[hidden] + span {display: inline; color: #ddd;}
   .thin {opacity: 0.2;}
   #toast {
    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -92,6 +94,7 @@
   const defaultBlur = 0.15, blurDigits = 2;
   const defaultAutoSpeed = 7, autoStep = wheelStep, autoMillisec = 100;
   const doubleTapMillisec = 500, doubleTapDistance = 100;
+  const downloadLinkDelayMillisec = 500;
   
   // samples
   const galleryCoef = [
@@ -119,6 +122,7 @@
   // init
   const internalCanvas = document.createElement('canvas');
   let mainCanvas, colorVec;
+  const updateDownloadLink = downloadLinkUpdater();
   readURL();
   updateCanvas();
   updateCoefForm();
@@ -336,10 +340,15 @@
     mainCanvas.style.filter = `blur(${b}vmin)`;
     Q('#blurVal').innerText = toNum(b).toFixed(blurDigits);
   }
-  function updateDownloadLink() {
-    const href = mainCanvas.toDataURL('image/png');
-    const download = `tapestry${encodeCoef(mainCoef)}.png`;
-    merge(Q('#download'), {href, download});
+  function downloadLinkUpdater() {
+    function updateNow() {
+      const href = mainCanvas.toDataURL('image/png');
+      const download = `tapestry${encodeCoef(mainCoef)}.png`;
+      merge(Q('#download'), {href, download, hidden: false});
+    }
+    const updateLater = deferredProc(updateNow, downloadLinkDelayMillisec);
+    function f() {Q('#download').hidden = true; updateLater();}
+    return f;
   }
   function toggleGPU() {
     if (!isTwglAvailable()) {toast('Missing TWGL.js'); return;}
@@ -533,6 +542,12 @@
     const conv = JSON.stringify;
     return lis[(lis.map(conv).indexOf(conv(cur)) + 1) % lis.length];
   }
+  function deferredProc(proc, delay) {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer); timer = setTimeout(() => proc(...args), delay);
+    }
+  }
  }
  </script>
  <script defer src="twgl.min.js"></script>
@@ -579,7 +594,7 @@ c=<input id="coef" type="number" min="0" step="0.0001">
 &nbsp;
 <button id="copyURL">Set &amp; Copy URL</button>
 <button id="newTab">New Tab</button>
-<a id="download">Download image</a>
+<a id="download">Download image</a><span>Download image</span>
 </p>
 <h2>What is this?</h2>
 <p>
