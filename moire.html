@@ -711,6 +711,8 @@
   // variations
   function showPresetColorVariations() {
     showGallery(colorTableList.map(ct => [mainCoef, ct]));
+    const cur = colorTableList.findIndex(ct => isSameColorTable(ct, colorTable));
+    cur >= 0 && setCurrentGallery(cur);
   }
   function showCoefVariations() {
     const {coefs} = variationNums;
