@@ -36,8 +36,9 @@
    display: flex; justify-content: center; align-items: center;
    opacity: 0; pointer-events: none;
   }
-  #toast p {
-   font-size: 200%; color: white; background-color: black;
+  #toastMessage {
+   max-width: 50vw; overflow-wrap: anywhere;
+   color: white; background-color: black;
    padding: 0.5em; border-radius: 1em; z-index: 9; position: relative;
   }
   .tooltip-origin {position: relative; display: inline-block;}
@@ -543,7 +544,9 @@
   let lastToastAnimation = null;
   function toast(message, millisec) {
     lastToastAnimation && lastToastAnimation.finish();
-    Q('#toastMessage').innerText = message;
+    const tm = Q('#toastMessage');
+    tm.innerText = message;
+    tm.style.fontSize = (message.length < 20 ? '200%' : '150%');
     const keyframes = [{opacity: 1}, {opacity: 0.8}, {opacity: 0}];
     lastToastAnimation = Q('#toast').animate(keyframes, millisec || 3000);
   }
