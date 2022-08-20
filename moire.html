@@ -144,8 +144,7 @@
   let autoTimer = null;
   
   // init
-  const internalCanvas = document.createElement('canvas');
-  let mainCanvas;
+  let mainCanvas, internalCanvas;
   const updateDownloadLink = downloadLinkUpdater();
   readURL();
   updateCanvas();
@@ -426,6 +425,7 @@
     if (!isTwglAvailable()) {toast('Missing TWGL.js'); return;}
     useGPU = !useGPU;
     removeMainCanvas(); // force reset
+    internalCanvas = null; // force reset
     update(true);
     updateURL();
     toast(useGPU ? 'GPU' : 'CPU');
@@ -473,22 +473,33 @@
   function copyCoef() {copyToClipboard(encodeCoef(mainCoef));}
   
   // canvas
+  function replaceCanvasMaybe(canvas, unit, pictureSize) {
+    // for GPU
+    const w = expectedCanvasWidth(unit);
+    const resized = !canvas || (canvas.width !== w);
+    if (!resized) {return canvas;}
+    canvas && canvas.remove();
+    const newCanvas = document.createElement('canvas');
+    setCanvasSize(newCanvas, unit, pictureSize);
+    return newCanvas;
+  }
+  function updateInternalCanvas() {
+    internalCanvas = replaceCanvasMaybe(internalCanvas, galleryUnit, galleryPictureSize);
+  }
+  function updateMainCanvas() {
+    const oldCanvas = mainCanvas;
+    mainCanvas = replaceCanvasMaybe(oldCanvas, mainUnit, mainPictureSize);
+    if (mainCanvas === oldCanvas) {return;}
+    mainCanvas.id = 'mainCanvas';
+    Q('#mainCanvasContainer').appendChild(mainCanvas);
+  }
   function updateCanvas() {
-    const w = expectedCanvasWidth(mainUnit);
-    const resized = !mainCanvas || (mainCanvas.width !== w);
-    resized && replaceMainCanvas(); // for GPU
-    setCanvasSize(mainCanvas, mainUnit, mainPictureSize);
-    setCanvasSize(internalCanvas, galleryUnit, galleryPictureSize);
+    updateMainCanvas();
+    updateInternalCanvas();
     Q('#mod').innerText = colorTable.length;
     showColorTable();
     setMouseActions(mainCanvas);
     updateBlur();
-  }
-  function replaceMainCanvas() {
-    removeMainCanvas();
-    mainCanvas = document.createElement('canvas');
-    mainCanvas.id = 'mainCanvas';
-    Q('#mainCanvasContainer').appendChild(mainCanvas);
   }
   function removeMainCanvas() {
     mainCanvas && mainCanvas.remove();
