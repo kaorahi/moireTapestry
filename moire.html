@@ -99,7 +99,7 @@
       '#00c', '#fff', '#fff', '#fff',
     ],
   ];
-  let colorTable = colorTableList[0];
+  const defaultColorTable = colorTableList[0];
   const maxRandomColors = 16;
   const similarCoefDelta = [6];  // (coef + delta) gives almost similar result
   const coefURLDigits = 7;
@@ -134,6 +134,7 @@
   
   // state
   let mainCoef = defaultCoef;
+  let colorTable = defaultColorTable;
   let useGPU = false;
   let autoTimer = null;
   
@@ -315,6 +316,7 @@
     colorTable = table;
     Q('#paletteLine').hidden = false;
     update(true);
+    updateURL();
   }
   function showColorTable() {
     const container = Q('#palette');
@@ -331,6 +333,12 @@
     });
     Q('#paletteColorNum').innerText = new Set(colorTable).size;
     Q('#paletteSlotNum').innerText = colorTable.length;
+  }
+  /* function encodeColorTable(a) {return a.join('_');} */
+  /* function decodeColorTable(s) {return s.split('_');} */
+  function encodeColorTable(a) {return JSON.stringify(a);}
+  function decodeColorTable(s) {
+    try {return JSON.parse(s);} catch {return defaultColorTable;}
   }
   
   // auto
@@ -369,7 +377,7 @@
       !keepAuto.includes(e.target.id) && (e.target.type !== 'range') && stopAuto();
     }
     document.addEventListener('click', stopAutoMaybe);
-    window.onpopstate = e => {readURL(); update();};
+    window.onpopstate = e => {readURL(); update(true);};
     merge(Q('#coef'), {
       oninput: setCoefByForm,
       onkeydown: e => {e.key === 'Enter' && (e.target.blur(), updateCoefForm());},
@@ -511,10 +519,12 @@
   
   // URL
   function readURL() {
+    colorTable = defaultColorTable;
     new URLSearchParams(location.search).forEach((value, key) => {
       switch (key) {
       case 'c': mainCoef = decodeCoef(value); break;
       case 'GPU': useGPU = true; break;
+      case 'palette': colorTable = decodeColorTable(value); break;
       }
     })
   }
@@ -527,6 +537,8 @@
     const params = new URLSearchParams('');
     params.append('c', encodeCoef(coef));
     useGPU && params.append('GPU', 'y');
+    const [ct, dct] = [colorTable, defaultColorTable].map(encodeColorTable);
+    ct !== dct && params.append('palette', ct);
     url.search = params.toString();
     return url.toString();
   }
