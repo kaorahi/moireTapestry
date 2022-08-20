@@ -30,6 +30,7 @@
   #coef[data-valid="no"] {background: pink;}
   #download + span {display: none;}
   #download[hidden] + span {display: inline; color: #ddd;}
+  #palette span:not(.tooltip-origin) {margin: 1px; padding: 0; border: solid 1px black;}
   .thin {opacity: 0.2;}
   #toast {
    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -99,6 +100,7 @@
     ],
   ];
   let colorTable = colorTableList[0];
+  const maxRandomColors = 16;
   const similarCoefDelta = [6];  // (coef + delta) gives almost similar result
   const coefURLDigits = 7;
   const horizontalDragStep = 0.01;
@@ -281,11 +283,54 @@
     case 'c': copyCoef(); break;
     case 'a': !isStopped && startAuto(); break;
     case 'f': toggleFullScreen(); break;
-    case 'C': colorTable = rotate(colorTable, colorTableList); update(true); break;
+    case 'C': rotateColorTable(); break;
     case 'R': [resolution, mainUnit] = rotate([resolution, mainUnit], resolutionList); update(true); break;
     case 'V': e.ctrlKey && (openVariations(), e.preventDefault()); break;
     case 'G': e.ctrlKey && (toggleGPU(), e.preventDefault()); break;
     }
+  }
+  
+  // color table
+  function copyColorTable() {
+    copyToClipboard(JSON.stringify(colorTable));
+    setColorTable(colorTable); // to show color table as side effect
+  }
+  function rotateColorTable() {setColorTable(rotate(colorTable, colorTableList));}
+  function randomizeColorTable() {
+    const r = Math.random(), n = rand(maxRandomColors - 1) + 2;
+    let c = randColor();
+    function generate_color() {Math.random() < r && (c = randColor()); return c;}
+    const a = [...Array(n)].map(generate_color);
+    const isSingleColor = a.every(z => z === a[0]);
+    isSingleColor ? randomizeColorTable() : setColorTable(shuffle(a));
+  }
+  function shuffleColorTable() {setColorTable(shuffle(colorTable));}
+  function mutateColorTable() {
+    const oldColor = [...new Set(colorTable)];
+    const newColor = oldColor.map(randColor);
+    const a = colorTable.map(c => newColor[oldColor.indexOf(c)]);
+    setColorTable(a);
+  }
+  function setColorTable(table) {
+    colorTable = table;
+    Q('#paletteLine').hidden = false;
+    update(true);
+  }
+  function showColorTable() {
+    const container = Q('#palette');
+    container.innerHTML = '';
+    colorTable.forEach(c => {
+      const t = document.createElement('div');
+      t.classList.add('tooltip-origin');
+      const elem = document.createElement('span');
+      elem.style.backgroundColor = c;
+      elem.dataset.tooltip = c;
+      elem.innerHTML = '&nbsp;';
+      container.appendChild(t);
+      t.appendChild(elem);
+    });
+    Q('#paletteColorNum').innerText = new Set(colorTable).size;
+    Q('#paletteSlotNum').innerText = colorTable.length;
   }
   
   // auto
@@ -337,6 +382,9 @@
     const buttonAction = {
       copyURL, newTab, nextGallery, prevGallery, startAuto, stopAuto,
       copyCoef, fullScreen,
+      rotateColorTable, randomizeColorTable,
+      shuffleColorTable, mutateColorTable,
+      copyColorTable,
     }
     function setAction(id, action){Q('#' + id).onclick = action;}
     eachKeyValue(buttonAction, setAction);
@@ -425,6 +473,7 @@
     setCanvasSize(internalCanvas, galleryUnit, galleryPictureSize);
     colorVec = getColorVectors(colorTable);
     Q('#mod').innerText = colorTable.length;
+    showColorTable();
     setMouseActions(mainCanvas);
     updateBlur();
   }
@@ -556,6 +605,10 @@
   function merge(target, ...sources) {Object.assign(target, ...sources);}
   function eachKeyValue(h, f) {Object.keys(h).forEach(k => f(k, h[k]));}
   function toNum(str) {return str - 0;}
+  function rand(n) {return Math.floor(Math.random() * n);}
+  /* function randColor() {return `#${rand(0x1000).toString(16).padStart(3, '0')}`;} */
+  function randColor() {return `hsl(${rand(360)},${rand(100)}%,${rand(100)}%)`;}
+  function shuffle(a) {return a.sort(() => Math.sign(Math.random() - 0.5));}
   function rotate(cur, lis) {
     const conv = JSON.stringify;
     return lis[(lis.map(conv).indexOf(conv(cur)) + 1) % lis.length];
@@ -605,6 +658,16 @@
  <div class="tooltip-origin"><button id="fullScreen" data-tooltip="Full Screen">⤢</button></div>
 </div>
 </div>
+<p id="paletteLine" hidden>
+Palette:
+ <span class="tooltip-origin"><button id="rotateColorTable" data-tooltip="Next">N</button></span>
+ <span class="tooltip-origin"><button id="randomizeColorTable" data-tooltip="Random">R</button></span>
+ <span class="tooltip-origin"><button id="shuffleColorTable" data-tooltip="Shuffle">S</button></span>
+ <span class="tooltip-origin"><button id="mutateColorTable" data-tooltip="Variation">V</button></span>
+<span id="palette"></span>
+(<span id="paletteColorNum"></span> colors in <span id="paletteSlotNum"></span> slots)
+<button id="copyColorTable">Copy</button>
+</p>
 <p>
 <span id="state"></span>
 c=<input id="coef" type="number" min="0" step="0.0001">
