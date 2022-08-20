@@ -739,7 +739,10 @@
     showVariationsGen(mainCoef, colorTable, {colors, alts, shuffles});
   }
   function showAltVariations() {
-    showVariationsGen(mainCoef, colorTable, {alts: altColorVariations});
+    const alts = altColorVariations;
+    const us = uniq(colorTable).length, cs = colorTable.length;
+    const note = `${alts} random variations of ${us} colors in ${cs} slots`
+    showVariationsGen(mainCoef, colorTable, {alts, note});
   }
   function showDefaultMixedVariations() {
     showVariationsGen(mainCoef, colorTable, mixedVariationNums);
@@ -749,13 +752,19 @@
     setColorTable(ctable);
     showDefaultMixedVariations();
   }
-  function showVariationsGen(c, ctable, {coefs, colors, alts, shuffles}) {
+  function showVariationsGen(c, ctable, {coefs, colors, alts, shuffles, note}) {
     function ntimes(n, f) {return n ? [...Array(n)].map(f) : [];}
+    const shufs = shuffles ? ctable.length - 1 : 0
     const a1 = ntimes(coefs, _ => [randCoef(), ctable]);
     const a2 = ntimes(colors, _ => [c, randomColorTable()]);
     const a3 = ntimes(alts, _ => [c, randomlyReplacedColorTable(ctable)]);
-    const a4 = shuffles ? ntimes(ctable.length - 1, _ => [c, shuffle(ctable)]) : [];
-    showGallery([...a1, ...a2, ...a3, ...a4]);
+    const a4 = ntimes(shufs, _ => [c, shuffle(ctable)]);
+    function noteItem([num, name]) {return num > 0 ? `${name} (${num})` : '';}
+    function defaultNote() {
+      const a = [[coefs, 'rand param'], [colors, 'rand colors'], [alts, 'alt colors'], [shufs, 'shuffled colors']];
+      return a.map(noteItem).filter(s => s).join(' + ');
+    }
+    showGallery([...a1, ...a2, ...a3, ...a4], note || defaultNote());
   }
 
   // toast
