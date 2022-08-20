@@ -293,7 +293,10 @@
     case 'a': !isStopped && startAuto(); break;
     case 'f': toggleFullScreen(); break;
     case 'R': [resolution, mainUnit] = rotate([resolution, mainUnit], resolutionList); update(true); break;
-    case 'G': e.ctrlKey && (toggleGPU(), e.preventDefault()); break;
+    case 'V': largeGallery(); showDefaultMixedVariations(); break;
+    case 'g': scrollToTop(); break;
+    case 'm': scrollToMid(); break;
+    case 'G': e.ctrlKey ? (toggleGPU(), e.preventDefault()) : scrollToBot(); break;
     }
   }
   
@@ -590,14 +593,14 @@
       }
     });
     updateGallery();
-    !keepPosition && gallery.scrollIntoView({behavior: 'smooth', block: 'start'});
+    !keepPosition && scrollToMid();
   }
   function drawGallery(coef, ctable, img) {
     draw(coef, ctable, internalCanvas, galleryUnit);
     img.src = internalCanvas.toDataURL('image/png');
   }
   function openGallery(coef, ctable) {
-    Q('#instruction').scrollIntoView({behavior: 'smooth', block: 'nearest'});
+    scrollToTop();
     updateURL();
     setCoef(coef);
     setColorTable(ctable);
@@ -698,6 +701,12 @@
         clearTimeout(timer); timer = setTimeout(() => proc(...args), delay);
     }
   }
+  function scrollToTop() {scrollTo('#instruction', 'nearest');}
+  function scrollToMid() {scrollTo('#samplesSection', 'start');}
+  function scrollToBot() {scrollTo('#usage', 'end');}
+  function scrollTo(query, block) {
+    Q(query).scrollIntoView({behavior: 'smooth', block});
+  }
  }
  </script>
  <script defer src="twgl.min.js"></script>
@@ -769,7 +778,7 @@ in <span id="palette"></span>
 </blockquote>
 for the given parameter c.
 </p>
-<h2>Samples</h2>
+<h2 id="samplesSection">Samples</h2>
 <p id="galleryController">
  size
  <button id="smallGallery">S</button>
@@ -787,7 +796,7 @@ These <span id="samples"></span> patterns are generated
 from just one parameter c without randomness.
 </p>
 <p id="gallery"></p>
-<h2>Advanced usage</h2>
+<h2 id="usage">Advanced usage</h2>
 <p>
 <ul>
  <li>Fast change: horizontal drag or '<' / '>' key</li>
@@ -797,7 +806,8 @@ from just one parameter c without randomness.
  <li>Copy c to clipboard: 'c' key</li>
  <li>Toggle auto: 'a' key</li>
  <li>Toggle full screen: 'f' key</li>
- <li>Show variations: Shift+Click pictures in "Samples" section</li>
+ <li>Show variations: 'Shift-v' key (or Shift+Click pictures in "Samples" section)</li>
+ <li>Scroll to top/middle/bottom: 'g' / 'm' / 'Shift-g' key</li>
 </ul>
 <h3 class="thin">(experimental)</h3>
 <ul class="thin">
