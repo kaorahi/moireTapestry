@@ -135,14 +135,14 @@
     11.1891, 11.3906, 11.6500, 11.6758, 11.6799, 11.8064,
   ].sort((a, b) => a - b);
   const galleryUnit = 1;
-  const galleryPictureSizeSML = ['5', '11', '22'];
-  const galleryPictureSize = galleryPictureSizeSML[0];
+  const galleryPictureSizeSML = ['5vw', '11vw', '22vw'];
   const defaultCoef = 3.6164;
   
   // state
   let mainCoef = defaultCoef;
   let colorTable = defaultColorTable;
   let useGPU = false;
+  let galleryPictureSize = galleryPictureSizeSML[0];
   let autoTimer = null;
   
   // init
@@ -406,15 +406,13 @@
       // id, value, oninput
       ['blur', defaultBlur, updateBlur],
       ['speed', defaultAutoSpeed, updateAutoSpeed],
-      ['gallerySize', galleryPictureSize, updateGallery],
     ];
     function setup([id, value, oninput]) {merge(Q('#' + id), {value, oninput});}
     sliderTable.forEach(setup);
   }
   function setGallerySize(size) {
-    const slider = Q('#gallerySize');
-    slider.value = size;
-    slider.oninput();
+    galleryPictureSize = size;
+    updateGallery();
   }
   function updateBlur() {
     const b = Q('#blur').value;
@@ -617,10 +615,9 @@
     const cur = (colorTable === defaultColorTable) &&
       isShowingDefaultGallery() &&
       galleryCoef.indexOf(findGallery(c => c >= mainCoef, false));
-    const size = `${Q('#gallerySize').value}vw`
     galleryImg().forEach((img, k) => {
       img.dataset.current = (k === cur) ? 'yes' : 'no';
-      img.style.width = img.style.height = size;
+      img.style.width = img.style.height = galleryPictureSize;
     });
   }
   function galleryImg() {return document.querySelectorAll('#gallery img');}
@@ -778,7 +775,7 @@ for the given parameter c.
  <button id="smallGallery">S</button>
  <button id="mediumGallery">M</button>
  <button id="largeGallery">L</button>
- <input id="gallerySize" type="range" min="5" max="40" step="1"></input>
+ &nbsp;
  <button id="showDefaultGallery">Gallery</button>
  <button id="showPresetColorVariations">Preset Colors</button>
  <button id="showCoefVariations">Random Param</button>
