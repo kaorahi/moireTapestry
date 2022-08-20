@@ -134,7 +134,9 @@
     10.5883, 10.6799, 10.6956, 10.7728,
     11.1891, 11.3906, 11.6500, 11.6758, 11.6799, 11.8064,
   ].sort((a, b) => a - b);
-  const galleryUnit = 1, galleryPictureSize = '5';
+  const galleryUnit = 1;
+  const galleryPictureSizeSML = ['5', '11', '22'];
+  const galleryPictureSize = galleryPictureSizeSML[0];
   const defaultCoef = 3.6164;
   
   // state
@@ -146,6 +148,8 @@
   // init
   let mainCanvas, internalCanvas;
   const updateDownloadLink = downloadLinkUpdater();
+  const [smallGallery, mediumGallery, largeGallery] =
+    galleryPictureSizeSML.map(size => () => setGallerySize(size));
   readURL();
   updateCanvas();
   updateCoefForm();
@@ -389,6 +393,7 @@
     const buttonAction = {
       copyURL, newTab, nextGallery, prevGallery, startAuto, stopAuto,
       copyCoef, fullScreen,
+      smallGallery, mediumGallery, largeGallery,
       copyColorTable,
       showDefaultGallery, showCoefVariations, showColorVariations, showAltVariations,
       showPresetColorVariations, showDefaultMixedVariations,
@@ -405,6 +410,11 @@
     ];
     function setup([id, value, oninput]) {merge(Q('#' + id), {value, oninput});}
     sliderTable.forEach(setup);
+  }
+  function setGallerySize(size) {
+    const slider = Q('#gallerySize');
+    slider.value = size;
+    slider.oninput();
   }
   function updateBlur() {
     const b = Q('#blur').value;
@@ -764,7 +774,11 @@ for the given parameter c.
 </p>
 <h2>Samples</h2>
 <p id="galleryController">
- size <input id="gallerySize" type="range" min="5" max="40" step="1"></input>
+ size
+ <button id="smallGallery">S</button>
+ <button id="mediumGallery">M</button>
+ <button id="largeGallery">L</button>
+ <input id="gallerySize" type="range" min="5" max="40" step="1"></input>
  <button id="showDefaultGallery">Gallery</button>
  <button id="showPresetColorVariations">Preset Colors</button>
  <button id="showCoefVariations">Random Param</button>
