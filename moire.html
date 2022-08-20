@@ -31,6 +31,16 @@
   #download[hidden] + span {display: inline; color: #ddd;}
   #palette span:not(.tooltip-origin) {margin: 1px; padding: 0; border: solid 1px black;}
   .thin {opacity: 0.2;}
+  #colorEditor {
+   background-color: white; margin-bottom: 0.2em; padding: 0.2em;
+   animation: VerticalOpen 0.2s;
+  }
+  @keyframes VerticalOpen {
+   0% {transform: scaleY(0);}
+   90% {transform: scaleY(1.2);}
+   100% {transform: scaleY(1);}
+  }
+  #colorEditor input[type="color"] {width: 2em;}
   #toast {
    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
    display: flex; justify-content: center; align-items: center;
@@ -52,7 +62,6 @@
   #galleryController {
    background-color: #ddd; padding: 0.2em; position: sticky; top: 0;
   }
-
  </style>
  <script>
  'use strict'
@@ -101,7 +110,7 @@
       '#00c', '#fff', '#fff', '#fff',
     ],
   ];
-  const defaultColorTable = colorTableList[0];
+  const defaultColorTable = colorTableList[0].slice();
   const maxRandomColors = 16;
   const coefURLDigits = 7;
   const horizontalDragStep = 0.01;
@@ -317,14 +326,15 @@
   }
   function randomlyReplacedColorTable(ctable) {
     const randColor = randColorGenerator();
-    const oldColor = [...new Set(ctable)];
+    const oldColor = uniq(ctable);
     const newColor = oldColor.map(randColor);
     return ctable.map(c => newColor[oldColor.indexOf(c)]);
   }
   function setColorTable(table) {
-    colorTable = table;
+    colorTable = table.slice();
     update(true);
     updateURL();
+    updateColorEditor();
   }
   function showColorTable() {
     const container = Q('#palette');
@@ -339,7 +349,7 @@
       container.appendChild(t);
       t.appendChild(elem);
     });
-    Q('#paletteColorNum').innerText = new Set(colorTable).size;
+    Q('#paletteColorNum').innerText = uniq(colorTable).length;
   }
   /* function encodeColorTable(a) {return a.join('_');} */
   /* function decodeColorTable(s) {return s.split('_');} */
@@ -350,6 +360,53 @@
   function isSameColorTable(ctable1, ctable2) {
     const [s1, s2] = [ctable1, ctable2].map(encodeColorTable);
     return (s1 === s2);
+  }
+  
+  // color editor
+  let oldColorTable;
+  Q('#groupwise').onchange = updateColorEditor;
+  function showColorEditor() {
+    updateColorEditor();
+    Q('#colorEditor').hidden = false;
+    Q('#showColorEditor').disabled = true;
+  }
+  function finishColorEditor(newColorTable) {
+    setColorTable(newColorTable);
+    Q('#colorEditor').hidden = true;
+    Q('#showColorEditor').disabled = false;
+  }
+  function acceptColorEditor() {finishColorEditor(colorTable);}
+  function cancelColorEditor() {finishColorEditor(oldColorTable);}
+  function updateColorEditor() {
+    oldColorTable = colorTable.slice();
+    const initVal = normalizeColorTable(colorTable);
+    const container = Q('#colorPickerContainer');
+    container.innerHTML = '';
+    function addPickers(a, setter) {
+      a.forEach((c, k) => container.appendChild(colorPicker(c, k, setter)));
+    }
+    function addPickersIndividually() {
+      addPickers(initVal, (k, v) => (colorTable[k] = v));
+    }
+    function addPickersGroupwise() {
+      const uniqueColor = uniq(initVal);
+      const group = uniqueColor.map(c => indicesOf(c, initVal));
+      const setter = (k, v) => group[k].forEach(j => colorTable[j] = v);
+      addPickers(uniqueColor, setter);
+    }
+    Q('#groupwise').checked ? addPickersGroupwise() : addPickersIndividually();
+  }
+  function colorPicker(initialValue, index, setter) {
+    const p = document.createElement('input');
+    p.type = 'color';
+    p.value = initialValue;
+    p.oninput = _ => {setter(index, p.value); update();};
+    return p;
+  }
+  function normalizeColorTable(ctable) {
+    function toHex(c) {return c.toString(16).padStart(2, '0');}
+    function toRGB(v) {return `#${v.slice(0, 3).map(toHex).join('')}`};
+    return getColorVectors(colorTable).map(toRGB);
   }
   
   // auto
@@ -405,6 +462,7 @@
       copyColorTable,
       showDefaultGallery, showCoefVariations, showColorVariations, showAltVariations,
       showPresetColorVariations, showDefaultMixedVariations,
+      showColorEditor, acceptColorEditor, cancelColorEditor,
     }
     function setAction(id, action){Q('#' + id).onclick = action;}
     eachKeyValue(buttonAction, setAction);
@@ -688,6 +746,8 @@
   function Q(query) {return document.querySelector(query);}
   function merge(target, ...sources) {Object.assign(target, ...sources);}
   function eachKeyValue(h, f) {Object.keys(h).forEach(k => f(k, h[k]));}
+  function uniq(ary) {return [...new Set(ary)];}
+  function indicesOf(x, ary) {return ary.flatMap((y, j) => x === y ? [j] : []);}
   function toNum(str) {return str - 0;}
   function yesNo(bool) {return bool ? 'yes' : 'no';}
   function rand(n) {return Math.floor(Math.random() * n);}
@@ -752,6 +812,18 @@
 </p>
 <div id="control">
 <div id="mainCanvasContainer"></div>
+<div id="colorEditor" hidden>
+ <div>
+  <span id="colorPickerContainer"></span>
+  <input id="groupwise" type="checkbox"></input><label for="groupwise">grouping</label>
+  &nbsp;
+  <div class="tooltip-origin"><button id="copyColorTable" data-tooltip="Copy to Clipboard">⧉</button></div>
+ </div>
+ <div>
+  <button id="acceptColorEditor">Ok</button>
+  <button id="cancelColorEditor">Cancel</button>
+ </div>
+</div>
 <div>
  <div class="tooltip-origin"><button id="startAuto" data-tooltip="Start Auto">▶</button><button id="stopAuto" hidden="true" data-tooltip="Stop Auto">⏸</button></div>
  speed <input id="speed" type="range" min="1" max="20" step="1"></input>
@@ -760,8 +832,9 @@
  <span class="thin" id="blurVal"></span>
  <div class="tooltip-origin"><button id="prevGallery" data-tooltip="Previous Sample">&lt;</button></div>
  <div class="tooltip-origin"><button id="nextGallery" data-tooltip="Next Sample">&gt;</button></div>
- <div class="tooltip-origin"><button id="showDefaultMixedVariations" data-tooltip="Variations">！</button></div>
- <div class="tooltip-origin"><button id="fullScreen" data-tooltip="Full Screen">⤢</button></div>
+ <div class="tooltip-origin"><button id="showDefaultMixedVariations" data-tooltip="Variations">⚃</button></div>
+<div class="tooltip-origin"><button id="showColorEditor" data-tooltip="Edit Colors">🖍</button></div>
+ <div class="tooltip-origin"><button id="fullScreen" data-tooltip="Full Screen">⤡</button></div>
 </div>
 </div>
 <p>
@@ -791,7 +864,6 @@ The color at the point (x, y) is determined from
 floor(c * (x*x + y*y)) mod <span id="mod"></span>
 in <span id="palette"></span>
 (<span id="paletteColorNum"></span> colors)
-<button id="copyColorTable">Copy</button>
 </blockquote>
 for the given parameter c.
 </p>
