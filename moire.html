@@ -49,6 +49,9 @@
    z-index: 9; top: 2em; left: 0em; white-space: nowrap;
   }
   [data-tooltip]:after {content: "";}
+  #galleryController {
+   background-color: #ddd; padding: 0.2em; position: sticky; top: 0;
+  }
 
  </style>
  <script>
@@ -111,6 +114,10 @@
   const defaultAutoSpeed = 7, autoStep = wheelStep, autoMillisec = 100;
   const doubleTapMillisec = 500, doubleTapDistance = 100;
   const downloadLinkDelayMillisec = 500;
+  const variationNums = {coefs: 100, colors: 90, alts: 10, shuffles: true};
+  const mixedVariationNums = {coefs: 50, colors: 40, alts: 10, shuffles: true};
+  const altColorVariations = 100;
+  const randColorEnhance = {s: 5.0, l: 5.0}; // >= 1
   
   // samples
   const galleryCoef = [
@@ -138,12 +145,12 @@
   
   // init
   const internalCanvas = document.createElement('canvas');
-  let mainCanvas, colorVec;
+  let mainCanvas;
   const updateDownloadLink = downloadLinkUpdater();
   readURL();
   updateCanvas();
   updateCoefForm();
-  insertGallery();
+  showDefaultGallery();
   initializeUI();
   update();
   !location.search && startAuto();
@@ -155,9 +162,9 @@
     draw(mainCoef);
     updateGallery();
   }
-  function draw(coef, canvas, unit) {
+  function draw(coef, ctable, canvas, unit) {
     const cv = canvas || mainCanvas;
-    const args = [coef, cv, unit || mainUnit];
+    const args = [coef, ctable || colorTable, cv, unit || mainUnit];
     const usingGPU = drawGPU(...args) || drawCPU(...args);
     if (cv !== mainCanvas) {return;}
     Q('#state').innerText = usingGPU ? '(GPU) ' : '';
@@ -165,20 +172,20 @@
   }
   
   // draw
-  function drawCPU(coef, canvas, unit) {
+  function drawCPU(coef, ctable, canvas, unit) {
     const g = canvas.getContext('2d');
     const center = Math.floor(resolution / 2);
     function sqr(k) {return k * k;}
     for (let i = 0; i < resolution; i++) {
       for (let j = 0; j < resolution; j++) {
         const k = Math.floor(coef * (sqr(i - center) + sqr(j - center)));
-        const style = colorTable[k % colorTable.length];
+        const style = ctable[k % ctable.length];
         fillSquare(g, i * unit, j * unit, unit, style);
       }
     }
     return false;
   }
-  function drawGPU(coef, canvas, unit) {
+  function drawGPU(coef, ctable, canvas, unit) {
     if (!useGPU || !isTwglAvailable()) {return false;}
     const gl = canvas.getContext('webgl');
     if (!gl) {return false;}
@@ -186,8 +193,9 @@
     const programInfo = twgl.createProgramInfo(gl, shaders);
     const arrays = {position: {numComponents: 2, data: [-1,-1, 1,-1, -1,1, 1,1]}};
     const bufferInfo = twgl.createBufferInfoFromArrays(gl, arrays);
+    const cvec = getColorVectors(ctable);
     // dummy texture to use colorTable in GPU
-    const src = colorVec.flat(), numColors = colorVec.length;
+    const src = cvec.flat(), numColors = cvec.length;
     const colorTexture = twgl.createTexture(gl, {src, width: numColors, height: 1})
     const uniforms = {resolution, unit, coef, numColors, colorTexture};
     gl.useProgram(programInfo.program);
@@ -294,24 +302,23 @@
     setColorTable(colorTable); // to show color table as side effect
   }
   function rotateColorTable() {setColorTable(rotate(colorTable, colorTableList));}
-  function randomizeColorTable() {
+  function randomColorTable() {
     const r = Math.random(), n = rand(maxRandomColors - 1) + 2;
+    const randColor = randColorGenerator();
     let c = randColor();
-    function generate_color() {Math.random() < r && (c = randColor()); return c;}
-    const a = [...Array(n)].map(generate_color);
+    function generateColor() {Math.random() < r && (c = randColor()); return c;}
+    const a = [...Array(n)].map(generateColor);
     const isSingleColor = a.every(z => z === a[0]);
-    isSingleColor ? randomizeColorTable() : setColorTable(shuffle(a));
+    return isSingleColor ? randomColorTable() : shuffle(a);
   }
-  function shuffleColorTable() {setColorTable(shuffle(colorTable));}
-  function mutateColorTable() {
-    const oldColor = [...new Set(colorTable)];
+  function randomlyReplacedColorTable(ctable) {
+    const randColor = randColorGenerator();
+    const oldColor = [...new Set(ctable)];
     const newColor = oldColor.map(randColor);
-    const a = colorTable.map(c => newColor[oldColor.indexOf(c)]);
-    setColorTable(a);
+    return ctable.map(c => newColor[oldColor.indexOf(c)]);
   }
   function setColorTable(table) {
     colorTable = table;
-    Q('#paletteLine').hidden = false;
     update(true);
     updateURL();
   }
@@ -329,7 +336,6 @@
       t.appendChild(elem);
     });
     Q('#paletteColorNum').innerText = new Set(colorTable).size;
-    Q('#paletteSlotNum').innerText = colorTable.length;
   }
   /* function encodeColorTable(a) {return a.join('_');} */
   /* function decodeColorTable(s) {return s.split('_');} */
@@ -387,9 +393,9 @@
     const buttonAction = {
       copyURL, newTab, nextGallery, prevGallery, startAuto, stopAuto,
       copyCoef, fullScreen,
-      rotateColorTable, randomizeColorTable,
-      shuffleColorTable, mutateColorTable,
       copyColorTable,
+      showDefaultGallery, showCoefVariations, showColorVariations, showAltVariations,
+      showPresetColorVariations, showDefaultMixedVariations,
     }
     function setAction(id, action){Q('#' + id).onclick = action;}
     eachKeyValue(buttonAction, setAction);
@@ -476,7 +482,6 @@
     resized && replaceMainCanvas(); // for GPU
     setCanvasSize(mainCanvas, mainUnit, mainPictureSize);
     setCanvasSize(internalCanvas, galleryUnit, galleryPictureSize);
-    colorVec = getColorVectors(colorTable);
     Q('#mod').innerText = colorTable.length;
     showColorTable();
     setMouseActions(mainCanvas);
@@ -529,13 +534,14 @@
     const url = generateURL(mainCoef);
     url !== location.href && history.pushState(null, document.title, url);
   }
-  function generateURL(coef) {
+  function generateURL(coef, optionColorTable) {
     const url = new URL(location.toString());
     const params = new URLSearchParams('');
     params.append('c', encodeCoef(coef));
     useGPU && params.append('GPU', 'y');
-    const [ct, dct] = [colorTable, defaultColorTable].map(encodeColorTable);
-    ct !== dct && params.append('palette', ct);
+    const ctab = optionColorTable || colorTable;
+    const [ct, dct] = [ctab, defaultColorTable].map(encodeColorTable);
+    ct && ct !== dct && params.append('palette', ct);
     url.search = params.toString();
     return url.toString();
   }
@@ -551,37 +557,54 @@
   }
   
   // gallery
-  function insertGallery() {
+  function showDefaultGallery() {
+    showGallery(galleryCoef.map(c => [c, defaultColorTable]), true, true);
+  }
+  function isShowingDefaultGallery() {return Q('#showDefaultGallery').disabled;} // fixme!
+  function showGallery(ary, keepPosition, isDefaultGallery) {
+    Q('#showDefaultGallery').disabled = isDefaultGallery;
+    Q('#galleryNote').hidden = !isDefaultGallery;
     const gallery = Q('#gallery');
+    gallery.innerHTML = '';
     Q('#samples').innerText = galleryCoef.length;
-    galleryCoef.forEach(c => {
+    ary.forEach(([c0, ct]) => {
+      const c = normalizeCoef(c0);
       const [a, img] = ['a', 'img'].map(tag => document.createElement(tag));
-      a.href = generateURL(c);
+      a.href = generateURL(c, ct);
       a.appendChild(img);
       gallery.appendChild(a);
-      setTimeout(() => drawGallery(c, img));
-      a.onclick = e => {e.preventDefault(); openGallery(c);}
+      setTimeout(() => drawGallery(c, ct, img));
+      a.onclick = e => {
+        e.preventDefault();
+        e.shiftKey ? showMixedVariations(c, ct) : openGallery(c, ct);
+      }
     });
+    updateGallery();
+    !keepPosition && gallery.scrollIntoView({behavior: 'smooth', block: 'start'});
   }
-  function drawGallery(coef, img) {
-    draw(coef, internalCanvas, galleryUnit);
+  function drawGallery(coef, ctable, img) {
+    draw(coef, ctable, internalCanvas, galleryUnit);
     img.src = internalCanvas.toDataURL('image/png');
   }
-  function openGallery(coef) {
+  function openGallery(coef, ctable) {
     Q('#instruction').scrollIntoView({behavior: 'smooth', block: 'nearest'});
     updateURL();
     setCoef(coef);
-    updateURL();
+    setColorTable(ctable);
   }
   function nextGallery() {nextGalleryGen(c => c > mainCoef, false);}
   function prevGallery() {nextGalleryGen(c => c < mainCoef, true);}
-  function nextGalleryGen(pred, reversed) {openGallery(findGallery(pred, reversed));}
+  function nextGalleryGen(pred, reversed) {
+    openGallery(findGallery(pred, reversed), colorTable);
+  }
   function findGallery(pred, reversed) {
     const orig = galleryCoef, a = reversed ? orig.slice().reverse() : orig;
     return a.find(pred) || a[0];
   }
   function updateGallery() {
-    const cur = galleryCoef.indexOf(findGallery(c => c >= mainCoef, false));
+    const cur = (colorTable === defaultColorTable) &&
+      isShowingDefaultGallery() &&
+      galleryCoef.indexOf(findGallery(c => c >= mainCoef, false));
     const size = `${Q('#gallerySize').value}vw`
     galleryImg().forEach((img, k) => {
       img.dataset.current = (k === cur) ? 'yes' : 'no';
@@ -589,6 +612,38 @@
     });
   }
   function galleryImg() {return document.querySelectorAll('#gallery img');}
+  
+  // variations
+  function showPresetColorVariations() {
+    showGallery(colorTableList.map(ct => [mainCoef, ct]));
+  }
+  function showCoefVariations() {
+    const {coefs} = variationNums;
+    showVariationsGen(mainCoef, colorTable, {coefs});
+  }
+  function showColorVariations() {
+    const {colors, alts, shuffles} = variationNums;
+    showVariationsGen(mainCoef, colorTable, {colors, alts, shuffles});
+  }
+  function showAltVariations() {
+    showVariationsGen(mainCoef, colorTable, {alts: altColorVariations});
+  }
+  function showDefaultMixedVariations() {
+    showVariationsGen(mainCoef, colorTable, mixedVariationNums);
+  }
+  function showMixedVariations(c, ctable) {
+    setCoef(c);
+    setColorTable(ctable);
+    showDefaultMixedVariations();
+  }
+  function showVariationsGen(c, ctable, {coefs, colors, alts, shuffles}) {
+    function ntimes(n, f) {return n ? [...Array(n)].map(f) : [];}
+    const a1 = ntimes(coefs, _ => [Math.random() * ctable.length, ctable]);
+    const a2 = ntimes(colors, _ => [c, randomColorTable()]);
+    const a3 = ntimes(alts, _ => [c, randomlyReplacedColorTable(ctable)]);
+    const a4 = shuffles ? ntimes(ctable.length - 1, _ => [c, shuffle(ctable)]) : [];
+    showGallery([...a1, ...a2, ...a3, ...a4]);
+  }
   
   // toast
   let lastToastAnimation = null;
@@ -607,9 +662,23 @@
   function eachKeyValue(h, f) {Object.keys(h).forEach(k => f(k, h[k]));}
   function toNum(str) {return str - 0;}
   function rand(n) {return Math.floor(Math.random() * n);}
-  /* function randColor() {return `#${rand(0x1000).toString(16).padStart(3, '0')}`;} */
-  function randColor() {return `hsl(${rand(360)},${rand(100)}%,${rand(100)}%)`;}
-  function shuffle(a) {return a.sort(() => Math.sign(Math.random() - 0.5));}
+  function randColorGenerator() {
+    function modestRand(modest, range) {
+      return Math.round(range * Math.random() ** modest);
+    }
+    function randomEnhance(enhance) {return enhance ** Math.random();}
+    const enh = {s: randomEnhance(randColorEnhance.s),
+                 l: randomEnhance(randColorEnhance.l)};
+    function randColor() {
+      const h = rand(360);
+      const s = modestRand(1 / enh.s, 100);
+      const lSign = Math.sign(Math.random() - 0.5);
+      const l = 50 + lSign * modestRand(enh.l, 50);
+      return `hsl(${h},${s}%,${l}%)`;
+    }
+    return randColor;
+  }
+  function shuffle(a) {return a.slice().sort(() => Math.sign(Math.random() - 0.5));}
   function rotate(cur, lis) {
     const conv = JSON.stringify;
     return lis[(lis.map(conv).indexOf(conv(cur)) + 1) % lis.length];
@@ -656,19 +725,10 @@
  <span class="thin" id="blurVal"></span>
  <div class="tooltip-origin"><button id="prevGallery" data-tooltip="Previous Sample">&lt;</button></div>
  <div class="tooltip-origin"><button id="nextGallery" data-tooltip="Next Sample">&gt;</button></div>
+ <div class="tooltip-origin"><button id="showDefaultMixedVariations" data-tooltip="Variations">！</button></div>
  <div class="tooltip-origin"><button id="fullScreen" data-tooltip="Full Screen">⤢</button></div>
 </div>
 </div>
-<p id="paletteLine" hidden>
-Palette:
- <span class="tooltip-origin"><button id="rotateColorTable" data-tooltip="Next">N</button></span>
- <span class="tooltip-origin"><button id="randomizeColorTable" data-tooltip="Random">R</button></span>
- <span class="tooltip-origin"><button id="shuffleColorTable" data-tooltip="Shuffle">S</button></span>
- <span class="tooltip-origin"><button id="mutateColorTable" data-tooltip="Variation">V</button></span>
-<span id="palette"></span>
-(<span id="paletteColorNum"></span> colors in <span id="paletteSlotNum"></span> slots)
-<button id="copyColorTable">Copy</button>
-</p>
 <p>
 <span id="state"></span>
 c=<input id="coef" type="number" min="0" step="0.0001">
@@ -694,13 +754,25 @@ September 1986.
 The color at the point (x, y) is determined from
 <blockquote>
 floor(c * (x*x + y*y)) mod <span id="mod"></span>
+in <span id="palette"></span>
+(<span id="paletteColorNum"></span> colors)
+<button id="copyColorTable">Copy</button>
 </blockquote>
 for the given parameter c.
 </p>
 <h2>Samples</h2>
+<p id="galleryController">
+ size <input id="gallerySize" type="range" min="5" max="40" step="1"></input>
+ <button id="showDefaultGallery">Gallery</button>
+ <button id="showPresetColorVariations">Preset Colors</button>
+ <button id="showCoefVariations">Random Param</button>
+ <button id="showColorVariations">Random Colors</button>
+ <button id="showAltVariations">Alt Colors</button>
+</p>
+<p id="galleryNote">
 These <span id="samples"></span> patterns are generated
 from just one parameter c without randomness.
-<p>size <input id="gallerySize" type="range" min="5" max="40" step="1"></input></p>
+</p>
 <p id="gallery"></p>
 <h2>Advanced usage</h2>
 <p>
@@ -712,6 +784,7 @@ from just one parameter c without randomness.
  <li>Copy c to clipboard: 'c' key</li>
  <li>Toggle auto: 'a' key</li>
  <li>Toggle full screen: 'f' key</li>
+ <li>Show variations: Shift+Click pictures in "Samples" section</li>
 </ul>
 <h3 class="thin">(experimental)</h3>
 <ul class="thin">
