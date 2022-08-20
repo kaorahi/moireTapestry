@@ -303,6 +303,7 @@
     case 'f': toggleFullScreen(); break;
     case 'z': rotateGallerySize(); break;
     case 'R': [resolution, mainUnit] = rotate([resolution, mainUnit], resolutionList); update(true); break;
+    case 'v': showPresetColorVariations(); break;
     case 'V': showDefaultMixedVariations(); break;
     case 'g': scrollToTop(); break;
     case 'm': scrollToMid(); break;
@@ -832,7 +833,8 @@
  <span class="thin" id="blurVal"></span>
  <div class="tooltip-origin"><button id="prevGallery" data-tooltip="Previous Sample">&lt;</button></div>
  <div class="tooltip-origin"><button id="nextGallery" data-tooltip="Next Sample">&gt;</button></div>
- <div class="tooltip-origin"><button id="showDefaultMixedVariations" data-tooltip="Variations">⚃</button></div>
+ <div class="tooltip-origin"><button id="showPresetColorVariations" data-tooltip="Color Variations">🎨</button></div>
+ <div class="tooltip-origin"><button id="showDefaultMixedVariations" data-tooltip="Random Variations">⚃</button></div>
 <div class="tooltip-origin"><button id="showColorEditor" data-tooltip="Edit Colors">🖍</button></div>
  <div class="tooltip-origin"><button id="fullScreen" data-tooltip="Full Screen">⤡</button></div>
 </div>
@@ -875,7 +877,7 @@ for the given parameter c.
  <button id="largeGallery">L</button>
  &nbsp;
  <button id="showDefaultGallery">Gallery</button>
- <button id="showPresetColorVariations">Preset Colors</button>
+ &nbsp;
  <button id="showCoefVariations">Random Param</button>
  <button id="showColorVariations">Random Colors</button>
  <button id="showAltVariations">Alt Colors</button>
@@ -896,7 +898,7 @@ from just one parameter c without randomness.
  <li>Toggle auto: 'a' key</li>
  <li>Toggle full screen: 'f' key</li>
  <li>Switch sample picture size: 'z' key</li>
- <li>Show variations: 'Shift-v' key (or Shift+Click pictures in "Samples" section)</li>
+ <li>Generate random variations: 'Shift-v' key (or Shift+Click pictures in "Samples" section)</li>
  <li>Scroll to top/middle/bottom: 'g' / 'm' / 'Shift-g' key</li>
 </ul>
 <h3 class="thin">(experimental)</h3>
