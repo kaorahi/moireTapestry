@@ -305,10 +305,6 @@
   }
   
   // color table
-  function copyColorTable() {
-    copyToClipboard(encodeColorTable(colorTable));
-    setColorTable(colorTable); // to show color table as side effect
-  }
   function randomColorTable() {
     const r = Math.random(), n = rand(maxRandomColors - 1) + 2;
     const randColor = randColorGenerator();
@@ -399,6 +395,10 @@
   }
   function normalizeColorTable(ctable) {
     return getColorVectors(colorTable).map(toRGB);
+  }
+  function copyColorTable() {
+    copyToClipboard(encodeColorTable(colorTable));
+    setColorTable(colorTable); // to show color table as side effect
   }
   
   // auto
