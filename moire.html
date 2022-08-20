@@ -20,6 +20,7 @@
   #gallery img:hover {
     border: solid 2px blue; transform: scale(1.5); transition: transform 0.1s;
   }
+  #gallery div:hover {z-index: 9;}
   #control {
     display: inline-block; text-align: center; padding: 2vmin; background: #ccc;
     border-radius: 1vmin;
@@ -60,9 +61,10 @@
    color: black; background-color: #ff9; padding: 0.2em;
    z-index: 9; top: 100%; left: 0%; white-space: nowrap;
   }
+  #gallery [data-tooltip]:hover:after {top: 125%;}
   [data-tooltip]:after {content: "";}
   #galleryController {
-   background-color: #ddd; padding: 0.2em; position: sticky; top: 0;
+   background-color: #ddd; padding: 0.2em; position: sticky; top: 0; z-index: 10;
   }
   #pickColors img {max-width: 2em; max-height: 1em; transition: transform 0.1s;}
   #pickColors:hover img {
@@ -671,9 +673,13 @@
     gallery.innerHTML = '';
     ary.forEach(([c0, ct], k) => {
       const c = normalizeCoef(c0);
+      const ctIndex = colorTableList.findIndex(t => isSameColorTable(t, ct));
+      const ctTooltip = ctIndex >= 0 ? ` #${ctIndex}` : ''
+      const tooltip = `c=${encodeCoef(c)} (${uniq(ct).length}/${ct.length} colors/slots${ctTooltip})`
       const [a, img] = ['a', 'img'].map(tag => document.createElement(tag));
       a.href = generateURL(c, ct);
-      a.appendChild(img);
+      a.innerHTML = `<div class="tooltip-origin"><span data-tooltip="${tooltip}"></span></div>`;
+      a.querySelector('span').appendChild(img);
       gallery.appendChild(a);
       setTimeout(() => drawGallery(c, ct, img));
       img.onclick = e => {
