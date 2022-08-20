@@ -121,7 +121,7 @@
     // brown blobs
     ['#fc9', '#f96', '#c33', '#633', '#cff', '#fff', '#fc9', '#f96', '#c33', '#633', '#cff', '#fff'],
     // black & white
-    ['black', 'white', 'white', 'white', 'black', 'white', 'white', 'white', 'black', 'white', 'white', 'white'],
+    ['black', 'white', 'white', 'white'],
     // four colors
     ['#f00', '#fff', '#fff', '#fff', '#366', '#fff', '#fff', '#f60', '#00c', '#fff', '#fff', '#fff'],
   ];
@@ -288,7 +288,7 @@
     case 'f': toggleFullScreen(); return;
     case 'z': rotateGallerySize(); return;
     case 'R': rotateResolution(); return;
-    case 'x': exitFullScreen(showPresetColorVariations); return;
+    case 'x': case 'X': exitFullScreen(() => showPresetColorVariations(e)); return;
     case 'V': exitFullScreen(showDefaultMixedVariations); return;
     case 'g': scrollToTop(); return;
     case 'm': scrollToMid(); return;
@@ -658,7 +658,8 @@
       };
     });
     updateGallery();
-    !keepPosition && scrollToMid();
+    keepPosition === 'nearest' ? scrollToMidMaybe() :
+      (!keepPosition && scrollToMid());
   }
   function drawGallery(coef, ctable, img) {
     draw(coef, ctable, internalCanvas, galleryUnit);
@@ -704,11 +705,24 @@
   function galleryImg() {return [...document.querySelectorAll('#gallery img')];}
   
   // variations
-  function showPresetColorVariations() {
-    const ctabs = shuffle(colorTableList);
+  function showPresetColorVariations(e) {
+    e && e.preventDefault();
+    function numSlots(colors) {return colors.length;}
+    function numColors(colors) {return uniq(colors).length;}
+    const [_, sortingCriterion, info, keepPosition] = [
+      ['shiftKey', numSlots, 'sorted by number of color slots', 'nearest'],
+      ['ctrlKey', numColors, 'sorted by number of actual colors', 'nearest'],
+      ['altKey', null, 'default order', 'nearest'],
+      [null, Math.random, 'shuffled', false],
+    ].find(([modifier]) => !modifier || (e || {})[modifier]);
+    showPresetColorVariationsGen(sortingCriterion, info, keepPosition);
+  }
+  function showPresetColorVariationsGen(sortingCriterion, info, keepPosition) {
+    const ctabs = sortingCriterion ?
+      sortBy(colorTableList, sortingCriterion) : colorTableList;
     const c = randCoef(Math.max(...ctabs.map(a => a.length)));
-    const note = `${ctabs.length} preset colors for c = ${c} (shuffled)`
-    showGallery(ctabs.map(ct => [c, ct]), note);
+    const note = `${ctabs.length} preset colors for c = ${c} (${info})`
+    showGallery(ctabs.map(ct => [c, ct]), note, keepPosition);
     const cur = ctabs.findIndex(ct => isSameColorTable(ct, colorTable));
     cur >= 0 && setCurrentGallery(cur);
   }
@@ -754,6 +768,7 @@
   // misc. actions
   function scrollToTop() {scrollTo('#instruction', 'nearest');}
   function scrollToMid() {scrollTo('#galleryTop', 'start');}
+  function scrollToMidMaybe() {scrollTo('#samplesSection', 'nearest');}
   function scrollToBot() {scrollTo('#usage', 'end');}
   function scrollTo(query, block) {
     Q(query).scrollIntoView({behavior: 'smooth', block});
@@ -790,7 +805,8 @@
     }
     return randColor;
   }
-  function shuffle(a) {return a.slice().sort(() => Math.sign(Math.random() - 0.5));}
+  function shuffle(a) {return sortBy(a, Math.random);}
+  function sortBy(a, f) {return a.slice().sort((x, y) => f(x) - f(y));}
   function rotate(cur, lis) {
     const conv = JSON.stringify;
     return lis[(lis.map(conv).indexOf(conv(cur)) + 1) % lis.length];
@@ -884,6 +900,7 @@ in <span id="palette"></span>
 </blockquote>
 for the given parameter c.
 </p>
+<div id="samplesSection">
 <h2>Samples</h2>
 <span id="galleryTop"></span>
 <p id="galleryController">
@@ -903,6 +920,7 @@ for the given parameter c.
 </p>
 <p id="galleryNote"></p>
 <p id="gallery"></p>
+</div><!-- samplesSection -->
 <h2 id="usage">Advanced usage</h2>
 <p>
 <ul>
@@ -914,7 +932,7 @@ for the given parameter c.
  <li>Toggle auto: 'a' key</li>
  <li>Toggle full screen: 'f' key</li>
  <li>Switch sample picture size: 'z' key</li>
- <li>Show color variations for random c: 'x' key</li>
+ <li>Show random gallery: 'x' key ('Shift/Ctrl/Alt-x' for sorting by "number of color slots" / "number of actual colors" / "default order" instead of shuffling)</li>
  <li>Generate random variations: 'Shift+v' key (or Shift+Click pictures in "Samples" section)</li>
  <li>Scroll to top/middle/bottom: 'g' / 'm' / 'Shift-g' key</li>
 </ul>
