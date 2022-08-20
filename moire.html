@@ -448,6 +448,7 @@
       copyColorTable,
       showDefaultGallery, showCoefVariations, showColorVariations, showAltVariations,
       showPresetColorVariations, showDefaultMixedVariations,
+      showPresetColorVariationsSimply,
       showColorEditor, acceptColorEditor, cancelColorEditor,
     }
     function setAction(id, action){Q('#' + id).onclick = action;}
@@ -705,6 +706,9 @@
   function galleryImg() {return [...document.querySelectorAll('#gallery img')];}
   
   // variations
+  function showPresetColorVariationsSimply() {
+    showPresetColorVariationsGen(mainCoef, null, 'default order', 'nearest');
+  }
   function showPresetColorVariations(e) {
     e && e.preventDefault();
     function numSlots(colors) {return colors.length;}
@@ -715,12 +719,12 @@
       ['altKey', null, 'default order', 'nearest'],
       [null, Math.random, 'shuffled', false],
     ].find(([modifier]) => !modifier || (e || {})[modifier]);
-    showPresetColorVariationsGen(sortingCriterion, info, keepPosition);
+    const c = randCoef(Math.max(...colorTableList.map(a => a.length)));
+    showPresetColorVariationsGen(c, sortingCriterion, info, keepPosition);
   }
-  function showPresetColorVariationsGen(sortingCriterion, info, keepPosition) {
+  function showPresetColorVariationsGen(c, sortingCriterion, info, keepPosition) {
     const ctabs = sortingCriterion ?
       sortBy(colorTableList, sortingCriterion) : colorTableList;
-    const c = randCoef(Math.max(...ctabs.map(a => a.length)));
     const note = `${ctabs.length} preset colors for c = ${c} (${info})`
     showGallery(ctabs.map(ct => [c, ct]), note, keepPosition);
     const cur = ctabs.findIndex(ct => isSameColorTable(ct, colorTable));
@@ -916,6 +920,7 @@ for the given parameter c.
   <button id="showCoefVariations">rand param</button>
   <button id="showColorVariations">rand colors</button>
   <button id="showAltVariations">alt colors</button>
+  <button id="showPresetColorVariationsSimply">preset colors</button>
  </span>
 </p>
 <p id="galleryNote"></p>
