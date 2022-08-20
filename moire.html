@@ -290,7 +290,7 @@
     // ignore auto-repeat
     if (e.repeat) {return;}
     switch (e.key) {
-    case 'c': copyCoef(); return;
+    case 'c': !e.ctrlKey && copyCoef(); return;
     case 'a': !isStopped && startAuto(); return;
     case 'f': toggleFullScreen(); return;
     case 'z': rotateGallerySize(); return;
