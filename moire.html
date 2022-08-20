@@ -63,6 +63,11 @@
   #galleryController {
    background-color: #ddd; padding: 0.2em; position: sticky; top: 0;
   }
+  #pickColors img {max-width: 2em; max-height: 1em; transition: transform 0.1s;}
+  #pickColors:hover img {
+    border: solid 1px black; box-sizing: border-box;
+    transform: translate(500%,500%) scale(10); transition: transform 0.1s;
+  }
  </style>
  <script>
  'use strict'
@@ -88,6 +93,8 @@
   const mixedVariationNums = {coefs: 50, colors: 40, alts: 10, shuffles: true};
   const altColorVariations = 100;
   const randColorEnhance = {s: 5.0, l: 5.0}; // >= 1
+  const pickedColorsFromPastedImage =
+    {minColors: 3, maxColors: 32, sets: 10, coefs: 10};
   
   // samples
   const galleryCoef = [
@@ -135,7 +142,7 @@
   let autoTimer = null;
   
   // init
-  let mainCanvas, internalCanvas;
+  let mainCanvas, internalCanvas, pastedImageCanvas;
   const updateDownloadLink = downloadLinkUpdater();
   const [smallGallery, mediumGallery, largeGallery] =
     galleryPictureSizeSML.map(size => () => setGallerySize(size));
@@ -390,8 +397,6 @@
     return p;
   }
   function normalizeColorTable(ctable) {
-    function toHex(c) {return c.toString(16).padStart(2, '0');}
-    function toRGB(v) {return `#${v.slice(0, 3).map(toHex).join('')}`};
     return getColorVectors(colorTable).map(toRGB);
   }
   
@@ -450,6 +455,7 @@
       showPresetColorVariations, showDefaultMixedVariations,
       showPresetColorVariationsSimply,
       showColorEditor, acceptColorEditor, cancelColorEditor,
+      pickColors,
     }
     function setAction(id, action){Q('#' + id).onclick = action;}
     eachKeyValue(buttonAction, setAction);
@@ -753,7 +759,6 @@
     showDefaultMixedVariations();
   }
   function showVariationsGen(c, ctable, {coefs, colors, alts, shuffles, note}) {
-    function ntimes(n, f) {return n ? [...Array(n)].map(f) : [];}
     const shufs = shuffles ? ctable.length - 1 : 0
     const a1 = ntimes(coefs, _ => [randCoef(), ctable]);
     const a2 = ntimes(colors, _ => [c, randomColorTable()]);
@@ -792,16 +797,73 @@
     scrollToTop();
   }
   
+  // paste
+  window.addEventListener('paste', e => {
+    Object.values(e.clipboardData.items).forEach(item => {
+      const f = item.type.match('^image/') && item.getAsFile();
+      f && loadImage(URL.createObjectURL(f));
+    })
+  })
+  function loadImage(url) {
+    toast('Try loading...');
+    const img = new Image();
+    img.src = Q('#pickColors img').src = url;
+    img.onload = () => drawImage(img);
+  }
+  function drawImage(img) {
+    const {width, height} = img;
+    const canvas = document.createElement('canvas');
+    merge(canvas, {width, height});
+    canvas.getContext('2d').drawImage(img, 0, 0);
+    pastedImageCanvas = canvas;
+    pickColors();
+    Q('#pickColors').hidden = false;
+  }
+  function pickColors() {
+    // setup
+    const {minColors, maxColors, sets, coefs} = pickedColorsFromPastedImage;
+    const canvas = pastedImageCanvas;
+    if (!canvas) {return;}
+    const {width, height} = canvas, ctx = canvas.getContext('2d');
+    const imageData = ctx.getImageData(0, 0, width, height).data;
+    // util
+    function rgba256(x, y) {
+      const k = (x + y * width) * 4, a = imageData.slice(k, k + 4);
+      return a.length === 4 ? [...a] : [0, 0, 0, 0];
+    }
+    function pickOneColor() {
+      const [x, y] = [width, height].map(size => rand(size));
+      return toRGB(rgba256(x, y));
+    }
+    function pickColorTable() {
+      const colorNum = Math.round(expRand(minColors, maxColors));
+      return ntimes(colorNum, pickOneColor);
+    }
+    // main
+    function showPickedVariations() {
+      const ts = ntimes(sets, pickColorTable), cs = ntimes(coefs, randCoef);
+      const a = ts.flatMap(t => cs.map(c => [c, t]));
+      const note = `${sets} color sets were picked randomly from the pasted image.`;
+      showGallery(a, note);
+    }
+    exitFullScreen(showPickedVariations);
+}
+  
   // util
   function Q(query) {return document.querySelector(query);}
   function merge(target, ...sources) {Object.assign(target, ...sources);}
   function eachKeyValue(h, f) {Object.keys(h).forEach(k => f(k, h[k]));}
   function uniq(ary) {return [...new Set(ary)];}
   function indicesOf(x, ary) {return ary.flatMap((y, j) => x === y ? [j] : []);}
+  function ntimes(n, f) {return n ? [...Array(n)].map(f) : [];}
   function toNum(str) {return str - 0;}
+    function toHex(c) {return c.toString(16).padStart(2, '0');}
+    function toRGB(v) {return `#${v.slice(0, 3).map(toHex).join('')}`};
   function yesNo(bool) {return bool ? 'yes' : 'no';}
   function positiveMod(x, mod) {return (x + mod) % mod;}
   function rand(n) {return Math.floor(Math.random() * n);}
+  function unifRand(a, b) {return a + (b - a) * Math.random();}
+  function expRand(a, b) {return Math.exp(unifRand(...[a, b].map(Math.log)));}
   function randColorGenerator() {
     function modestRand(modest, range) {
       return Math.round(range * Math.random() ** modest);
@@ -931,11 +993,19 @@ for the given parameter c.
   <button id="showAltVariations">alt colors</button>
   <button id="showPresetColorVariationsSimply">preset colors</button>
  </span>
+ &nbsp;
+ <button id="pickColors" hidden>Retry Image <img id="pastedImageInButton"></button>
 </p>
 <p id="galleryNote"></p>
 <p id="gallery"></p>
 </div><!-- samplesSection -->
-<h2 id="usage">Advanced usage</h2>
+<h2 id="usage">Tips</h2>
+<p>
+<ul>
+ <li>Horizontal/vertical drag causes fast/slow change of the pattern.</li>
+ <li>You can paste any image via clipboard ('Ctrl-v' key, etc.) to pick colors from it.</li>
+</ul>
+<h2>Shortcut keys</h2>
 <p>
 <ul>
  <li>Fast change: horizontal drag or '<' / '>' key</li>
@@ -948,6 +1018,7 @@ for the given parameter c.
  <li>Switch sample picture size: 'z' key</li>
  <li>Show random gallery: 'x' key ('Shift/Ctrl/Alt-x' for sorting by "number of color slots" / "number of actual colors" / "default order" instead of shuffling)</li>
  <li>Generate random variations: 'Shift+v' key (or Shift+Click pictures in "Samples" section)</li>
+ <li>Pick colors from an image: Copy &amp; paste the image via the clipboard. ('Ctrl+v' key, etc.)</li>
  <li>Scroll to top/middle/bottom: 'g' / 'm' / 'Shift-g' key</li>
 </ul>
 <h3 class="thin">(experimental)</h3>
