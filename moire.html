@@ -269,25 +269,30 @@
   document.onkeydown = e => {
     const isStopped = stopAuto();
     if (e.target.tagName === 'INPUT') {return;}
+    // allow auto-repeat
     switch (e.key) {
-    case '<': addCoef(- kbdFastStep); break;
-    case '>': addCoef(+ kbdFastStep); break;
-    case ',': addCoef(- kbdSlowStep); break;
-    case '.': addCoef(+ kbdSlowStep); break;
-    case '[': addCoef(- kbdFineStep); break;
-    case ']': addCoef(+ kbdFineStep); break;
-    case '(': prevGallery(); break;
-    case ')': nextGallery(); break;
-    case 'c': copyCoef(); break;
-    case 'a': !isStopped && startAuto(); break;
-    case 'f': toggleFullScreen(); break;
-    case 'z': rotateGallerySize(); break;
-    case 'R': rotateResolution(); break;
-    case 'x': exitFullScreen(showPresetColorVariations); break;
-    case 'V': exitFullScreen(showDefaultMixedVariations); break;
-    case 'g': scrollToTop(); break;
-    case 'm': scrollToMid(); break;
-    case 'G': e.ctrlKey ? (toggleGPU(), e.preventDefault()) : scrollToBot(); break;
+    case '<': addCoef(- kbdFastStep); return;
+    case '>': addCoef(+ kbdFastStep); return;
+    case ',': addCoef(- kbdSlowStep); return;
+    case '.': addCoef(+ kbdSlowStep); return;
+    case '[': addCoef(- kbdFineStep); return;
+    case ']': addCoef(+ kbdFineStep); return;
+    case '(': prevGallery(); return;
+    case ')': nextGallery(); return;
+    }
+    // ignore auto-repeat
+    if (e.repeat) {return;}
+    switch (e.key) {
+    case 'c': copyCoef(); return;
+    case 'a': !isStopped && startAuto(); return;
+    case 'f': toggleFullScreen(); return;
+    case 'z': rotateGallerySize(); return;
+    case 'R': rotateResolution(); return;
+    case 'x': exitFullScreen(showPresetColorVariations); return;
+    case 'V': exitFullScreen(showDefaultMixedVariations); return;
+    case 'g': scrollToTop(); return;
+    case 'm': scrollToMid(); return;
+    case 'G': e.ctrlKey ? (toggleGPU(), e.preventDefault()) : scrollToBot(); return;
     }
   }
   
