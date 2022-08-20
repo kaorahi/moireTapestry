@@ -72,46 +72,6 @@
   const resolutionList = [[101, 4], [151, 4], [201, 2], [401, 1], [51, 8]];
   let [resolution, mainUnit] = resolutionList[0];
   const mainPictureSize = '70vmin';
-  const colorTableList = [
-    // light
-    [
-      'white', 'orange', 'white', 'pink', 'white', 'red',
-      'white', 'magenta', 'white', 'yellow', 'white', 'blue',
-    ],
-    // dense light
-    [
-      'white', 'brown', 'orange', 'white', 'pink', 'red',
-      'white', 'khaki', 'magenta', 'white', 'yellow', 'blue',
-    ],
-    // red
-    [
-      'red', 'white', 'red', 'red', 'white', 'white',
-      'red', 'navy', 'green', 'white', 'silver', 'gold',
-    ],
-    // brown
-    [
-      '#fc9', '#c33', '#633', '#fc9', '#fff', '#cff',
-      '#f96', '#cff', '#fff', '#c33', '#f96', '#633',
-    ],
-    // brown blobs
-    [
-      '#fc9', '#f96', '#c33', '#633', '#cff', '#fff',
-      '#fc9', '#f96', '#c33', '#633', '#cff', '#fff',
-    ],
-    // black & white
-    [
-      'black', 'white', 'white', 'white',
-      'black', 'white', 'white', 'white',
-      'black', 'white', 'white', 'white',
-    ],
-    // four colors
-    [
-      '#f00', '#fff', '#fff', '#fff',
-      '#366', '#fff', '#fff', '#f60',
-      '#00c', '#fff', '#fff', '#fff',
-    ],
-  ];
-  const defaultColorTable = colorTableList[0].slice();
   const maxRandomColors = 16;
   const coefURLDigits = 7;
   const horizontalDragStep = 0.01;
@@ -147,6 +107,25 @@
   const galleryUnit = 2;
   const galleryPictureSizeSML = ['5vw', '11vw', '22vw'];
   const defaultCoef = 3.6164;
+  
+  // color tables
+  const colorTableList = [
+    // light
+    ['white', 'orange', 'white', 'pink', 'white', 'red', 'white', 'magenta', 'white', 'yellow', 'white', 'blue'],
+    // dense light
+    ['white', 'brown', 'orange', 'white', 'pink', 'red', 'white', 'khaki', 'magenta', 'white', 'yellow', 'blue'],
+    // red
+    ['red', 'white', 'red', 'red', 'white', 'white', 'red', 'navy', 'green', 'white', 'silver', 'gold'],
+    // brown
+    ['#fc9', '#c33', '#633', '#fc9', '#fff', '#cff', '#f96', '#cff', '#fff', '#c33', '#f96', '#633'],
+    // brown blobs
+    ['#fc9', '#f96', '#c33', '#633', '#cff', '#fff', '#fc9', '#f96', '#c33', '#633', '#cff', '#fff'],
+    // black & white
+    ['black', 'white', 'white', 'white', 'black', 'white', 'white', 'white', 'black', 'white', 'white', 'white'],
+    // four colors
+    ['#f00', '#fff', '#fff', '#fff', '#366', '#fff', '#fff', '#f60', '#00c', '#fff', '#fff', '#fff'],
+  ];
+  const defaultColorTable = colorTableList[0].slice();
   
   // state
   let mainCoef = defaultCoef;
