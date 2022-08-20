@@ -54,11 +54,11 @@
    padding: 0.5em; border-radius: 1em; z-index: 9; position: relative;
   }
   .tooltip-origin {position: relative; display: inline-block;}
-  [data-tooltip] {width: 2em; height: 2em;}
+  button[data-tooltip] {width: 2em; height: 2em;}
   [data-tooltip]:hover:after {
    content: attr(data-tooltip); display: inline-block; position: absolute;
-   background-color: #ff9; padding: 0.2em;
-   z-index: 9; top: 2em; left: 0em; white-space: nowrap;
+   color: black; background-color: #ff9; padding: 0.2em;
+   z-index: 9; top: 100%; left: 0%; white-space: nowrap;
   }
   [data-tooltip]:after {content: "";}
   #galleryController {
