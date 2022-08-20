@@ -767,6 +767,14 @@
     lastToastAnimation = Q('#toast').animate(keyframes, millisec || 3000);
   }
   
+  // misc. actions
+  function scrollToTop() {scrollTo('#instruction', 'nearest');}
+  function scrollToMid() {scrollTo('#galleryTop', 'start');}
+  function scrollToBot() {scrollTo('#usage', 'end');}
+  function scrollTo(query, block) {
+    Q(query).scrollIntoView({behavior: 'smooth', block});
+  }
+  
   // util
   function Q(query) {return document.querySelector(query);}
   function merge(target, ...sources) {Object.assign(target, ...sources);}
@@ -803,12 +811,6 @@
     return (...args) => {
         clearTimeout(timer); timer = setTimeout(() => proc(...args), delay);
     }
-  }
-  function scrollToTop() {scrollTo('#instruction', 'nearest');}
-  function scrollToMid() {scrollTo('#galleryTop', 'start');}
-  function scrollToBot() {scrollTo('#usage', 'end');}
-  function scrollTo(query, block) {
-    Q(query).scrollIntoView({behavior: 'smooth', block});
   }
  }
  </script>
