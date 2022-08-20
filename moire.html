@@ -321,6 +321,10 @@
     return ctable.map(c => newColor[oldColor.indexOf(c)]);
   }
   function setColorTable(table) {
+    if (!isValidColorTable(table)) {
+      toast(`invalid color table: ${JSON.stringify(table)}`);
+      return;
+    }
     colorTable = table.slice();
     update(true);
     updateURL();
@@ -346,6 +350,10 @@
   function encodeColorTable(a) {return JSON.stringify(a);}
   function decodeColorTable(s, failed) {
     try {return JSON.parse(s);} catch {return failed;}
+  }
+  function isValidColorTable(ctable) {
+    return Array.isArray(ctable) && ctable.length > 1 &&
+      ctable.every(s => typeof s === 'string');
   }
   function isSameColorTable(ctable1, ctable2) {
     const [s1, s2] = [ctable1, ctable2].map(encodeColorTable);
