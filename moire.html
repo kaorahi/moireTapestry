@@ -344,8 +344,8 @@
   /* function encodeColorTable(a) {return a.join('_');} */
   /* function decodeColorTable(s) {return s.split('_');} */
   function encodeColorTable(a) {return JSON.stringify(a);}
-  function decodeColorTable(s) {
-    try {return JSON.parse(s);} catch {return defaultColorTable;}
+  function decodeColorTable(s, failed) {
+    try {return JSON.parse(s);} catch {return failed;}
   }
   function isSameColorTable(ctable1, ctable2) {
     const [s1, s2] = [ctable1, ctable2].map(encodeColorTable);
@@ -400,6 +400,15 @@
     copyToClipboard(encodeColorTable(colorTable));
     setColorTable(colorTable); // to show color table as side effect
   }
+  function pasteColorTable(e) {
+    const elem = e.target, text = elem.value;
+    const ctable = decodeColorTable(text);
+    ctable ? (setColorTable(ctable), scrollToTop()) :
+      toast(`Invalid color table: ${text}`);
+    elem.value = '';
+    elem.blur();
+  }
+  Q('#pasteColorTable').oninput = pasteColorTable;
   
   // auto
   function startAuto() {
@@ -451,7 +460,7 @@
       copyURL, newTab, nextGallery, prevGallery, startAuto, stopAuto,
       copyCoef, fullScreen,
       smallGallery, mediumGallery, largeGallery,
-      copyColorTable, pasteColorTable,
+      copyColorTable,
       showDefaultGallery, showCoefVariations, showColorVariations, showAltVariations,
       showPresetColorVariations, showDefaultMixedVariations,
       showPresetColorVariationsSimply,
@@ -613,7 +622,7 @@
       switch (key) {
       case 'c': mainCoef = decodeCoef(value); break;
       case 'GPU': useGPU = true; break;
-      case 'palette': colorTable = decodeColorTable(value); break;
+      case 'palette': colorTable = decodeColorTable(value, defaultColorTable); break;
       }
     })
   }
@@ -798,8 +807,9 @@
     scrollToTop();
   }
   
-  // paste
+  // paste image
   window.addEventListener('paste', e => {
+    if (e.target.tagName === 'INPUT') {return;}
     Object.values(e.clipboardData.items).forEach(item => {
       const f = item.type.match('^image/') && item.getAsFile();
       f && loadImage(URL.createObjectURL(f));
@@ -927,7 +937,7 @@
   <input id="groupwise" type="checkbox"></input><label for="groupwise">grouping</label>
   &nbsp;
   <div class="tooltip-origin"><button id="copyColorTable" data-tooltip="Copy to Clipboard">⧉</button></div>
-  <div class="tooltip-origin"><span data-tooltip="Paste Here (Ctrl-C or Right-Click)"><input id="pasteColorTable" placeholder="📋"></input></span></div>
+  <div class="tooltip-origin"><span data-tooltip="Paste Here (Ctrl-V or Right-Click)"><input id="pasteColorTable" placeholder="📋"></input></span></div>
  </div>
  <div>
   <button id="acceptColorEditor">Ok</button>
