@@ -31,6 +31,7 @@
   #download[hidden] + span {display: inline; color: #ddd;}
   #palette span:not(.tooltip-origin) {margin: 1px; padding: 0; border: solid 1px black;}
   .thin {opacity: 0.2;}
+  .small * {font-size: 70%;}
   #colorEditor {
    background-color: white; margin-bottom: 0.2em; padding: 0.2em;
    animation: VerticalOpen 0.2s;
@@ -303,8 +304,8 @@
     case 'f': toggleFullScreen(); break;
     case 'z': rotateGallerySize(); break;
     case 'R': [resolution, mainUnit] = rotate([resolution, mainUnit], resolutionList); update(true); break;
-    case 'v': showPresetColorVariations(); break;
-    case 'V': showDefaultMixedVariations(); break;
+    case 'x': exitFullScreen(showPresetColorVariations); break;
+    case 'V': exitFullScreen(showDefaultMixedVariations); break;
     case 'g': scrollToTop(); break;
     case 'm': scrollToMid(); break;
     case 'G': e.ctrlKey ? (toggleGPU(), e.preventDefault()) : scrollToBot(); break;
@@ -508,9 +509,14 @@
     updateURL();
     toast(useGPU ? 'GPU' : 'CPU');
   }
+  
+  // fullscreen
   function fullScreen() {mainCanvas.requestFullscreen();}
-  function toggleFullScreen() {
-    document.fullscreenElement ? document.exitFullscreen() : fullScreen();
+  function toggleFullScreen() {exitFullScreen() || fullScreen();}
+  function exitFullScreen(proc) {
+    const exited = document.fullscreenElement && document.exitFullscreen();
+    proc && (exited ? exited.then(() => setTimeout(proc, 100)) : proc());
+    return exited;
   }
   
   // clipboard
@@ -529,10 +535,10 @@
   }
   function addCoef(d) {setCoef(mainCoef + d);}
   function normalizeMainCoef() {mainCoef = normalizeCoef(mainCoef);}
-  function normalizeCoef(coef) {
+  function normalizeCoef(coef, max) {
     function digitizeCoef(num) {return decodeCoef(encodeCoef(num))}
     const int = Math.floor(coef), frac = coef - int;
-    return digitizeCoef(positiveMod(int, colorTable.length) + frac);
+    return digitizeCoef(positiveMod(int, max || colorTable.length) + frac);
   }
   function encodeCoef(num) {return num.toFixed(coefURLDigits);}
   function decodeCoef(str) {return toNum(str);}
@@ -548,6 +554,10 @@
     valid && setCoef(c, true);
   }
   function copyCoef() {copyToClipboard(encodeCoef(mainCoef));}
+  function randCoef(max) {
+    const m = max || colorTable.length;
+    return normalizeCoef(Math.random() * m, m);
+  }
   
   // canvas
   function replaceCanvasMaybe(canvas, unit, pictureSize) {
@@ -636,19 +646,20 @@
   }
   
   // gallery
-  function showDefaultGallery() {
-    showGallery(galleryCoef.map(c => [c, defaultColorTable]), true, true);
+  function showDefaultGallery(e) {
+    const keepPosition = !e;
+    const note = `These ${galleryCoef.length} patterns are generated from just one parameter c without randomness.`;
+    showGallery(galleryCoef.map(c => [c, defaultColorTable]), note, keepPosition, true);
   }
   function isDefaultColorAndGallery() {
     const isDefaultGallery = Q('#showDefaultGallery').disabled; // fixme!
     return isDefaultGallery && isSameColorTable(colorTable, defaultColorTable);
   }
-  function showGallery(ary, keepPosition, isDefaultGallery) {
+  function showGallery(ary, note, keepPosition, isDefaultGallery) {
     Q('#showDefaultGallery').disabled = isDefaultGallery;
-    Q('#galleryNote').hidden = !isDefaultGallery;
+    Q('#galleryNote').innerText = note || '';
     const gallery = Q('#gallery');
     gallery.innerHTML = '';
-    Q('#samples').innerText = galleryCoef.length;
     ary.forEach(([c0, ct], k) => {
       const c = normalizeCoef(c0);
       const [a, img] = ['a', 'img'].map(tag => document.createElement(tag));
@@ -710,8 +721,11 @@
   
   // variations
   function showPresetColorVariations() {
-    showGallery(colorTableList.map(ct => [mainCoef, ct]));
-    const cur = colorTableList.findIndex(ct => isSameColorTable(ct, colorTable));
+    const ctabs = shuffle(colorTableList);
+    const c = randCoef(Math.max(...ctabs.map(a => a.length)));
+    const note = `${ctabs.length} preset colors for c = ${c} (shuffled)`
+    showGallery(ctabs.map(ct => [c, ct]), note);
+    const cur = ctabs.findIndex(ct => isSameColorTable(ct, colorTable));
     cur >= 0 && setCurrentGallery(cur);
   }
   function showCoefVariations() {
@@ -735,13 +749,13 @@
   }
   function showVariationsGen(c, ctable, {coefs, colors, alts, shuffles}) {
     function ntimes(n, f) {return n ? [...Array(n)].map(f) : [];}
-    const a1 = ntimes(coefs, _ => [Math.random() * ctable.length, ctable]);
+    const a1 = ntimes(coefs, _ => [randCoef(), ctable]);
     const a2 = ntimes(colors, _ => [c, randomColorTable()]);
     const a3 = ntimes(alts, _ => [c, randomlyReplacedColorTable(ctable)]);
     const a4 = shuffles ? ntimes(ctable.length - 1, _ => [c, shuffle(ctable)]) : [];
     showGallery([...a1, ...a2, ...a3, ...a4]);
   }
-  
+
   // toast
   let lastToastAnimation = null;
   function toast(message, millisec) {
@@ -791,7 +805,7 @@
     }
   }
   function scrollToTop() {scrollTo('#instruction', 'nearest');}
-  function scrollToMid() {scrollTo('#samplesSection', 'start');}
+  function scrollToMid() {scrollTo('#galleryTop', 'start');}
   function scrollToBot() {scrollTo('#usage', 'end');}
   function scrollTo(query, block) {
     Q(query).scrollIntoView({behavior: 'smooth', block});
@@ -844,7 +858,6 @@
  <span class="thin" id="blurVal"></span>
  <div class="tooltip-origin"><button id="prevGallery" data-tooltip="Previous Sample">&lt;</button></div>
  <div class="tooltip-origin"><button id="nextGallery" data-tooltip="Next Sample">&gt;</button></div>
- <div class="tooltip-origin"><button id="showPresetColorVariations" data-tooltip="Color Variations">🎨</button></div>
  <div class="tooltip-origin"><button id="showDefaultMixedVariations" data-tooltip="Random Variations">⚃</button></div>
 <div class="tooltip-origin"><button id="showColorEditor" data-tooltip="Edit Colors">🖍</button></div>
  <div class="tooltip-origin"><button id="fullScreen" data-tooltip="Full Screen">⤡</button></div>
@@ -880,7 +893,8 @@ in <span id="palette"></span>
 </blockquote>
 for the given parameter c.
 </p>
-<h2 id="samplesSection">Samples</h2>
+<h2>Samples</h2>
+<span id="galleryTop"></span>
 <p id="galleryController">
  size
  <button id="smallGallery">S</button>
@@ -888,15 +902,15 @@ for the given parameter c.
  <button id="largeGallery">L</button>
  &nbsp;
  <button id="showDefaultGallery">Gallery</button>
+ <button id="showPresetColorVariations">Random Gallery</button>
  &nbsp;
- <button id="showCoefVariations">Random Param</button>
- <button id="showColorVariations">Random Colors</button>
- <button id="showAltVariations">Alt Colors</button>
+ <span class="small">
+  <button id="showCoefVariations">rand param</button>
+  <button id="showColorVariations">rand colors</button>
+  <button id="showAltVariations">alt colors</button>
+ </span>
 </p>
-<p id="galleryNote">
-These <span id="samples"></span> patterns are generated
-from just one parameter c without randomness.
-</p>
+<p id="galleryNote"></p>
 <p id="gallery"></p>
 <h2 id="usage">Advanced usage</h2>
 <p>
@@ -909,7 +923,8 @@ from just one parameter c without randomness.
  <li>Toggle auto: 'a' key</li>
  <li>Toggle full screen: 'f' key</li>
  <li>Switch sample picture size: 'z' key</li>
- <li>Generate random variations: 'Shift-v' key (or Shift+Click pictures in "Samples" section)</li>
+ <li>Show color variations for random c: 'x' key</li>
+ <li>Generate random variations: 'Shift+v' key (or Shift+Click pictures in "Samples" section)</li>
  <li>Scroll to top/middle/bottom: 'g' / 'm' / 'Shift-g' key</li>
 </ul>
 <h3 class="thin">(experimental)</h3>
