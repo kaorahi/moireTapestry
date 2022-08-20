@@ -531,7 +531,6 @@
   function normalizeMainCoef() {mainCoef = normalizeCoef(mainCoef);}
   function normalizeCoef(coef) {
     function digitizeCoef(num) {return decodeCoef(encodeCoef(num))}
-    function positiveMod(k, mod) {return ((k % mod) + mod) % mod;}
     const int = Math.floor(coef), frac = coef - int;
     return digitizeCoef(positiveMod(int, colorTable.length) + frac);
   }
@@ -657,11 +656,11 @@
       a.appendChild(img);
       gallery.appendChild(a);
       setTimeout(() => drawGallery(c, ct, img));
-      a.onclick = e => {
-        e.preventDefault();
-        e.shiftKey ? showMixedVariations(c, ct) :
+      img.onclick = e => {
+        e && e.preventDefault();
+        e && e.shiftKey ? showMixedVariations(c, ct) :
           (openGallery(c, ct), setCurrentGallery(k));
-      }
+      };
     });
     updateGallery();
     !keepPosition && scrollToMid();
@@ -676,10 +675,16 @@
     setCoef(coef);
     setColorTable(ctable);
   }
-  function nextGallery() {nextGalleryGen(c => c > mainCoef, false);}
-  function prevGallery() {nextGalleryGen(c => c < mainCoef, true);}
-  function nextGalleryGen(pred, reversed) {
-    openGallery(findGallery(pred, reversed), colorTable);
+  function nextGallery() {nextGalleryGen(+1, c => c > mainCoef, false);}
+  function prevGallery() {nextGalleryGen(-1, c => c < mainCoef, true);}
+  function nextGalleryGen(step, pred, reversed) {
+    isDefaultColorAndGallery() ?
+      openGallery(findGallery(pred, reversed), colorTable) : nextSample(step);
+  }
+  function nextSample(step) {
+    const a = galleryImg(), k = getCurrentGalleryIndex();
+    const next = positiveMod((k < 0 && step < 0) ? step : (k + step), a.length);
+    a[next].onclick();
   }
   function findGallery(pred, reversed) {
     const orig = galleryCoef, a = reversed ? orig.slice().reverse() : orig;
@@ -698,7 +703,10 @@
       img.dataset.current = yesNo(k === currentIndex);
     });
   }
-  function galleryImg() {return document.querySelectorAll('#gallery img');}
+  function getCurrentGalleryIndex() {
+    return galleryImg().findIndex(img => img.dataset.current === yesNo(true));
+  }
+  function galleryImg() {return [...document.querySelectorAll('#gallery img')];}
   
   // variations
   function showPresetColorVariations() {
@@ -751,6 +759,7 @@
   function indicesOf(x, ary) {return ary.flatMap((y, j) => x === y ? [j] : []);}
   function toNum(str) {return str - 0;}
   function yesNo(bool) {return bool ? 'yes' : 'no';}
+  function positiveMod(x, mod) {return (x + mod) % mod;}
   function rand(n) {return Math.floor(Math.random() * n);}
   function randColorGenerator() {
     function modestRand(modest, range) {
