@@ -42,6 +42,7 @@
    100% {transform: scaleY(1);}
   }
   #colorEditor input[type="color"] {width: 2em;}
+  #pasteColorTable {width: 2em;}
   #toast {
    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
    display: flex; justify-content: center; align-items: center;
@@ -305,7 +306,7 @@
   
   // color table
   function copyColorTable() {
-    copyToClipboard(JSON.stringify(colorTable));
+    copyToClipboard(encodeColorTable(colorTable));
     setColorTable(colorTable); // to show color table as side effect
   }
   function randomColorTable() {
@@ -450,7 +451,7 @@
       copyURL, newTab, nextGallery, prevGallery, startAuto, stopAuto,
       copyCoef, fullScreen,
       smallGallery, mediumGallery, largeGallery,
-      copyColorTable,
+      copyColorTable, pasteColorTable,
       showDefaultGallery, showCoefVariations, showColorVariations, showAltVariations,
       showPresetColorVariations, showDefaultMixedVariations,
       showPresetColorVariationsSimply,
@@ -926,6 +927,7 @@
   <input id="groupwise" type="checkbox"></input><label for="groupwise">grouping</label>
   &nbsp;
   <div class="tooltip-origin"><button id="copyColorTable" data-tooltip="Copy to Clipboard">⧉</button></div>
+  <div class="tooltip-origin"><span data-tooltip="Paste Here (Ctrl-C or Right-Click)"><input id="pasteColorTable" placeholder="📋"></input></span></div>
  </div>
  <div>
   <button id="acceptColorEditor">Ok</button>
