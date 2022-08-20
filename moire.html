@@ -436,7 +436,7 @@
   }
   
   // clipboard
-  function copyURL() {copyToClipboard(location.href);}
+  function copyURL() {updateURL(); copyToClipboard(location.href);}
   function copyToClipboard(text) {
     updateURL();
     navigator.clipboard.writeText(text);
