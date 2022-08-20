@@ -347,6 +347,10 @@
   function decodeColorTable(s) {
     try {return JSON.parse(s);} catch {return defaultColorTable;}
   }
+  function isSameColorTable(ctable1, ctable2) {
+    const [s1, s2] = [ctable1, ctable2].map(encodeColorTable);
+    return (s1 === s2);
+  }
   
   // auto
   function startAuto() {
@@ -577,14 +581,17 @@
   function showDefaultGallery() {
     showGallery(galleryCoef.map(c => [c, defaultColorTable]), true, true);
   }
-  function isShowingDefaultGallery() {return Q('#showDefaultGallery').disabled;} // fixme!
+  function isDefaultColorAndGallery() {
+    const isDefaultGallery = Q('#showDefaultGallery').disabled; // fixme!
+    return isDefaultGallery && isSameColorTable(colorTable, defaultColorTable);
+  }
   function showGallery(ary, keepPosition, isDefaultGallery) {
     Q('#showDefaultGallery').disabled = isDefaultGallery;
     Q('#galleryNote').hidden = !isDefaultGallery;
     const gallery = Q('#gallery');
     gallery.innerHTML = '';
     Q('#samples').innerText = galleryCoef.length;
-    ary.forEach(([c0, ct]) => {
+    ary.forEach(([c0, ct], k) => {
       const c = normalizeCoef(c0);
       const [a, img] = ['a', 'img'].map(tag => document.createElement(tag));
       a.href = generateURL(c, ct);
@@ -593,7 +600,8 @@
       setTimeout(() => drawGallery(c, ct, img));
       a.onclick = e => {
         e.preventDefault();
-        e.shiftKey ? showMixedVariations(c, ct) : openGallery(c, ct);
+        e.shiftKey ? showMixedVariations(c, ct) :
+          (openGallery(c, ct), setCurrentGallery(k));
       }
     });
     updateGallery();
@@ -619,12 +627,16 @@
     return a.find(pred) || a[0];
   }
   function updateGallery() {
-    const cur = (colorTable === defaultColorTable) &&
-      isShowingDefaultGallery() &&
-      galleryCoef.indexOf(findGallery(c => c >= mainCoef, false));
     galleryImg().forEach((img, k) => {
-      img.dataset.current = (k === cur) ? 'yes' : 'no';
       img.style.width = img.style.height = galleryPictureSize;
+    });
+    if (!isDefaultColorAndGallery()) {return;}
+    const cur = galleryCoef.indexOf(findGallery(c => c >= mainCoef, false));
+    setCurrentGallery(cur);
+  }
+  function setCurrentGallery(currentIndex) {
+    galleryImg().forEach((img, k) => {
+      img.dataset.current = yesNo(k === currentIndex);
     });
   }
   function galleryImg() {return document.querySelectorAll('#gallery img');}
@@ -677,6 +689,7 @@
   function merge(target, ...sources) {Object.assign(target, ...sources);}
   function eachKeyValue(h, f) {Object.keys(h).forEach(k => f(k, h[k]));}
   function toNum(str) {return str - 0;}
+  function yesNo(bool) {return bool ? 'yes' : 'no';}
   function rand(n) {return Math.floor(Math.random() * n);}
   function randColorGenerator() {
     function modestRand(modest, range) {
