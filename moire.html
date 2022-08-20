@@ -292,8 +292,9 @@
     case 'c': copyCoef(); break;
     case 'a': !isStopped && startAuto(); break;
     case 'f': toggleFullScreen(); break;
+    case 'z': rotateGallerySize(); break;
     case 'R': [resolution, mainUnit] = rotate([resolution, mainUnit], resolutionList); update(true); break;
-    case 'V': largeGallery(); showDefaultMixedVariations(); break;
+    case 'V': showDefaultMixedVariations(); break;
     case 'g': scrollToTop(); break;
     case 'm': scrollToMid(); break;
     case 'G': e.ctrlKey ? (toggleGPU(), e.preventDefault()) : scrollToBot(); break;
@@ -416,6 +417,9 @@
   function setGallerySize(size) {
     galleryPictureSize = size;
     updateGallery();
+  }
+  function rotateGallerySize() {
+    setGallerySize(rotate(galleryPictureSize, galleryPictureSizeSML));
   }
   function updateBlur() {
     const b = Q('#blur').value;
@@ -806,6 +810,7 @@ from just one parameter c without randomness.
  <li>Copy c to clipboard: 'c' key</li>
  <li>Toggle auto: 'a' key</li>
  <li>Toggle full screen: 'f' key</li>
+ <li>Switch sample picture size: 'z' key</li>
  <li>Show variations: 'Shift-v' key (or Shift+Click pictures in "Samples" section)</li>
  <li>Scroll to top/middle/bottom: 'g' / 'm' / 'Shift-g' key</li>
 </ul>
