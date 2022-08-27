@@ -816,7 +816,7 @@
     const gallery = Q('#gallery');
     gallery.innerHTML = '';
     ary.forEach(([c0, ct], k) => {
-      const c = normalizeCoef(c0);
+      const c = normalizeCoef(c0, ct.length);
       const ctIndex = colorTableList.findIndex(t => isSameColorTable(t, ct));
       const ctTooltip = ctIndex >= 0 ? ` #${ctIndex}` : ''
       const tooltip = `c=${encodeCoef(c)} (${uniq(ct).length}/${ct.length} colors/slots${ctTooltip})`
