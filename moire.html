@@ -98,6 +98,7 @@
   const randColorEnhance = {s: 5.0, l: 5.0}; // >= 1
   const pickedColorsFromPastedImage =
     {minColors: 3, maxColors: 32, sets: 10, coefs: 10};
+  const supportImageDownloadingForGPU = true;
   
   // samples
   const galleryCoef = [
@@ -333,7 +334,8 @@
   }
   function drawGPU(coef, ctable, canvas, unit) {
     if (!useGPU || !isTwglAvailable()) {return false;}
-    const gl = canvas.getContext('webgl');
+    const preserveDrawingBuffer = supportImageDownloadingForGPU;
+    const gl = canvas.getContext('webgl', {preserveDrawingBuffer});
     if (!gl) {return false;}
     const shaders = ['vertex_shader', 'fragment_shader'];
     const programInfo = twgl.createProgramInfo(gl, shaders);
@@ -348,6 +350,7 @@
     twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
     twgl.setUniforms(programInfo, uniforms);
     twgl.drawBufferInfo(gl, bufferInfo, gl.TRIANGLE_STRIP);
+    gl.finish();
     return true;
   }
   function isTwglAvailable() {return typeof twgl !== 'undefined';}
